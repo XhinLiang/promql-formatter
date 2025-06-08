@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PromQL Formatter",
   "version": "1.0",
-  "description": "格式化 PromQL 查询语句",
+  "description": "Format PromQL queries",
   "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
   "action": {
     "default_popup": "popup.html",

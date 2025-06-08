@@ -1,9 +1,9 @@
-// 当页面加载完成后，检查是否有 PromQL 输入框
+// When the page is loaded, check for PromQL input fields
 console.log('[PromQL Formatter] Content script loaded');
 
-// 检测页面中的 PromQL 查询框（基于常见的 Prometheus UI 和 Grafana 特征）
+// Detect PromQL query fields in the page (based on common Prometheus UI and Grafana features)
 function detectPromQLFields() {
-  // 可能的 PromQL 输入元素选择器
+  // Possible PromQL input element selectors
   const selectors = [
     // Prometheus UI
     'textarea.promql-code',
@@ -11,7 +11,7 @@ function detectPromQLFields() {
     // Grafana
     '.gf-form-input[placeholder*="PromQL"]',
     '.gf-form-input[aria-label*="PromQL"]',
-    // 通用
+    // Generic
     'textarea[placeholder*="PromQL"]',
     'input[placeholder*="PromQL"]',
     'textarea.prometheus-query',
@@ -19,7 +19,7 @@ function detectPromQLFields() {
     '.monaco-editor'
   ];
 
-  // 查找匹配的元素
+  // Find matching elements
   for (const selector of selectors) {
     const elements = document.querySelectorAll(selector);
     if (elements.length > 0) {
@@ -31,12 +31,12 @@ function detectPromQLFields() {
   return [];
 }
 
-// 添加格式化按钮到 PromQL 输入框旁边
+// Add format buttons next to PromQL input fields
 function addFormatButtons(fields) {
   fields.forEach((field, index) => {
-    // 创建一个格式化按钮
+    // Create a format button
     const button = document.createElement('button');
-    button.textContent = '格式化 PromQL';
+    button.textContent = 'Format PromQL';
     button.className = 'promql-formatter-button';
     button.style.marginLeft = '5px';
     button.style.padding = '4px 8px';
@@ -46,9 +46,9 @@ function addFormatButtons(fields) {
     button.style.borderRadius = '4px';
     button.style.cursor = 'pointer';
     
-    // 监听按钮点击事件
+    // Listen for button click events
     button.addEventListener('click', () => {
-      // 向扩展发送消息，请求格式化 field 中的查询
+      // Send message to extension, requesting to format the query in the field
       const query = field.value || field.textContent;
       if (query && query.trim()) {
         chrome.runtime.sendMessage({
@@ -56,7 +56,7 @@ function addFormatButtons(fields) {
           query: query
         }, response => {
           if (response && response.success) {
-            // 如果成功，更新输入框中的内容
+            // If successful, update the content in the input field
             if (field.value !== undefined) {
               field.value = response.result;
             } else {
@@ -64,13 +64,13 @@ function addFormatButtons(fields) {
             }
           } else {
             console.error('[PromQL Formatter] Error formatting query:', response?.error || 'Unknown error');
-            alert('无法格式化 PromQL 查询: ' + (response?.error || '未知错误'));
+            alert('Unable to format PromQL query: ' + (response?.error || 'Unknown error'));
           }
         });
       }
     });
     
-    // 将按钮添加到字段旁边
+    // Add the button next to the field
     const parent = field.parentNode;
     parent.insertBefore(button, field.nextSibling);
     
@@ -78,7 +78,7 @@ function addFormatButtons(fields) {
   });
 }
 
-// 初始化
+// Initialize
 function init() {
   const fields = detectPromQLFields();
   if (fields.length > 0) {
@@ -88,14 +88,14 @@ function init() {
   }
 }
 
-// 页面加载完成后初始化
+// Initialize when the page is loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
 }
 
-// 监听页面变化，检测动态添加的 PromQL 字段
+// Listen for page changes, detect dynamically added PromQL fields
 const observer = new MutationObserver((mutations) => {
   let shouldReinit = false;
   
@@ -107,13 +107,13 @@ const observer = new MutationObserver((mutations) => {
   }
   
   if (shouldReinit) {
-    setTimeout(init, 1000); // 延迟初始化，确保动态内容已完全加载
+    setTimeout(init, 1000); // Delay initialization to ensure dynamic content is fully loaded
   }
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-// 监听来自后台脚本的消息
+// Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'reinitialize') {
     init();

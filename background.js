@@ -1,19 +1,19 @@
-// 创建右键菜单
+// Create context menu
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "formatPromQL",
-    title: "格式化 PromQL",
+    title: "Format PromQL",
     contexts: ["selection", "editable"]
   });
 });
 
-// 处理右键菜单点击事件
+// Handle context menu click events
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "formatPromQL") {
-    // 获取选中的文本
+    // Get selected text
     const selectedText = info.selectionText;
     if (selectedText && selectedText.trim()) {
-      // 存储查询，以便弹出窗口可以访问
+      // Store query for popup to access
       chrome.storage.local.set({ 
         pendingQuery: selectedText,
         pendingTabId: tab.id,
@@ -23,7 +23,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           editable: info.editable
         }
       }, () => {
-        // 打开弹出窗口以处理查询
+        // Open popup to process the query
         chrome.windows.create({
           url: 'popup.html',
           type: 'popup',
@@ -33,7 +33,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           left: 0,
           top: 0
         }, (popupWindow) => {
-          // 存储窗口 ID，以便后续关闭
+          // Store window ID for later closure
           chrome.storage.local.set({ popupWindowId: popupWindow.id });
         });
       });
@@ -41,57 +41,57 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// 监听来自内容脚本的消息
+// Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'formatPromQL') {
-    // 打开弹出窗口来格式化 PromQL 查询
-    // 这是一个替代方案，因为直接在后台脚本中加载 WASM 可能会有限制
-    // 弹出窗口将处理格式化并发送回结果
+    // Open popup to format PromQL query
+    // This is an alternative approach since loading WASM directly in background scripts may have limitations
+    // Popup will handle formatting and send back results
     
-    // 存储查询，以便弹出窗口可以访问
+    // Store query for popup to access
     chrome.storage.local.set({ 
       pendingQuery: message.query, 
       pendingTabId: sender.tab.id,
       isContextMenu: false
     }, () => {
-      // 打开弹出窗口以处理查询
+      // Open popup to process the query
       chrome.windows.create({
         url: 'popup.html',
         type: 'popup',
-        width: 10,  // 最小尺寸
+        width: 10,  // Minimum size
         height: 10,
         focused: false,
         left: 0,
         top: 0
       }, (popupWindow) => {
-        // 存储窗口 ID，以便后续关闭
+        // Store window ID for later closure
         chrome.storage.local.set({ popupWindowId: popupWindow.id });
       });
       
-      // 告诉内容脚本我们正在处理
+      // Tell content script we're processing
       sendResponse({ success: true, processing: true });
     });
     
-    // 返回 true 表示我们将异步发送响应
+    // Return true to indicate we'll send response asynchronously
     return true;
   }
 });
 
-// 监听来自弹出窗口的格式化结果
+// Listen for formatting results from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'formatPromQLResult') {
-    // 从存储中获取相关信息
+    // Get relevant information from storage
     chrome.storage.local.get(['pendingTabId', 'popupWindowId', 'isContextMenu', 'sourceElement'], (data) => {
       if (data.pendingTabId) {
         if (data.isContextMenu) {
-          // 如果是右键菜单，则使用 executeScript 替换选中的文本
+          // If from context menu, use executeScript to replace selected text
           chrome.scripting.executeScript({
             target: { tabId: data.pendingTabId, frameIds: [data.sourceElement?.frameId || 0] },
             function: replaceSelectedText,
             args: [message.result]
           });
         } else {
-          // 如果是常规请求，则将结果发送回原始标签页
+          // If regular request, send result back to original tab
           chrome.tabs.sendMessage(data.pendingTabId, {
             action: 'formatPromQLResponse',
             success: message.success,
@@ -100,12 +100,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         }
         
-        // 关闭弹出窗口
+        // Close popup window
         if (data.popupWindowId) {
           chrome.windows.remove(data.popupWindowId);
         }
         
-        // 清除存储
+        // Clear storage
         chrome.storage.local.remove(['pendingQuery', 'pendingTabId', 'popupWindowId', 'isContextMenu', 'sourceElement']);
       }
     });
@@ -115,22 +115,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// 监听标签页更新，在页面加载完成后重新初始化内容脚本
+// Listen for tab updates, reinitialize content scripts when page loads
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
     chrome.tabs.sendMessage(tabId, { action: 'reinitialize' }).catch(() => {
-      // 忽略错误，可能是页面没有加载内容脚本
+      // Ignore errors, page may not have content script loaded
     });
   }
 });
 
-// 在页面中替换选中的文本
+// Replace selected text in the page
 function replaceSelectedText(formattedText) {
-  // 如果当前有一个活动的文本编辑元素 (input, textarea, contenteditable)
+  // If there's an active text editing element (input, textarea, contenteditable)
   const activeElement = document.activeElement;
   
   if (activeElement) {
-    // 如果是 input 或 textarea
+    // If input or textarea
     if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
       const start = activeElement.selectionStart;
       const end = activeElement.selectionEnd;
@@ -139,13 +139,13 @@ function replaceSelectedText(formattedText) {
         const value = activeElement.value;
         activeElement.value = value.substring(0, start) + formattedText + value.substring(end);
         
-        // 更新选择区域
+        // Update selection range
         activeElement.selectionStart = start;
         activeElement.selectionEnd = start + formattedText.length;
         return true;
       }
     } 
-    // 如果是可编辑的 div 或其他元素
+    // If contenteditable div or other element
     else if (activeElement.isContentEditable || activeElement.contentEditable === 'true') {
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
@@ -155,10 +155,10 @@ function replaceSelectedText(formattedText) {
         return true;
       }
     }
-    // 特殊处理 Monaco 编辑器 (VSCode/Grafana 使用)
+    // Special handling for Monaco editor (used by VSCode/Grafana)
     else if (activeElement.classList.contains('monaco-editor')) {
       try {
-        // 尝试查找 Monaco 编辑器实例
+        // Try to find Monaco editor instance
         const editor = window.monaco?.editor?.getModels()[0];
         if (editor) {
           const selection = window.monaco.editor.getSelection();
@@ -172,24 +172,24 @@ function replaceSelectedText(formattedText) {
           }
         }
       } catch (e) {
-        console.error('Monaco 编辑器操作失败:', e);
+        console.error('Monaco editor operation failed:', e);
       }
     }
   }
   
-  // 后备方法：创建一个临时输入框来模拟复制粘贴
+  // Fallback method: Create a temporary input box to simulate copy-paste
   try {
-    // 保存当前选择
+    // Save current selection
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       
-      // 删除选中内容并插入格式化的文本
+      // Delete selected content and insert formatted text
       range.deleteContents();
       const textNode = document.createTextNode(formattedText);
       range.insertNode(textNode);
       
-      // 设置新的选择范围
+      // Set new selection range
       range.selectNodeContents(textNode);
       selection.removeAllRanges();
       selection.addRange(range);
@@ -197,11 +197,8 @@ function replaceSelectedText(formattedText) {
       return true;
     }
   } catch (e) {
-    console.error('替换选中文本失败:', e);
+    console.error('Failed to replace selected text:', e);
   }
-  
-  // 如果所有方法都失败，显示一个通知
-  alert('无法替换选中的文本。请尝试复制格式化的结果:\n' + formattedText);
   
   return false;
 } 
