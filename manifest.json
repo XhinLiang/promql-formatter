@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "PromQL Formatter",
+  "version": "1.0",
+  "description": "格式化 PromQL 查询语句",
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "web_accessible_resources": [{
+    "resources": ["wasm_exec.js", "promqlparser.wasm"],
+    "matches": ["<all_urls>"]
+  }],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "*://*.prometheus.io/*",
+    "*://*.grafana.com/*",
+    "*://*.grafana.net/*",
+    "*://localhost:*/*"
+  ]
+} 
