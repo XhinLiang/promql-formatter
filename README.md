@@ -1,53 +1,80 @@
-# PromQL Formatter Chrome 扩展
+# PromQL Formatter Chrome Extension
 
-这个 Chrome 扩展可以帮助你格式化 PromQL 查询语句，使其更易读。它基于 [o11y.tools](https://o11y.tools/) 的 PromQL 解析器，该解析器使用官方的 Prometheus 库并编译为 WebAssembly。
+A Chrome extension that helps you format PromQL queries to make them more readable. Based on the official Prometheus parser library compiled to WebAssembly via [o11y.tools](https://o11y.tools/).
 
-## 特点
+## Features
 
-- 直接在浏览器中格式化 PromQL 查询
-- 无需服务器，所有处理都在本地完成
-- 支持自动检测 Prometheus UI 和 Grafana 中的查询输入框
-- 可以通过扩展弹出窗口手动格式化查询
+- Format PromQL queries directly in your browser
+- No server required, all processing happens locally
+- Automatically detects query input fields in Prometheus UI and Grafana
+- Manually format queries through the extension popup
 
-## 使用方法
+## Usage
 
-### 在网页中自动检测并格式化
+### Automatic Detection and Formatting
 
-1. 访问包含 PromQL 查询输入框的页面（如 Prometheus UI 或 Grafana）
-2. 扩展会自动检测查询输入框并在其旁边添加"格式化 PromQL"按钮
-3. 输入 PromQL 查询后，点击按钮进行格式化
+1. Visit a page with PromQL query input fields (like Prometheus UI or Grafana)
+2. The extension automatically detects query fields and adds a "Format PromQL" button next to them
+3. After entering a PromQL query, click the button to format it
 
-### 使用扩展弹出窗口手动格式化
+### Manual Formatting with Extension Popup
 
-1. 点击工具栏中的扩展图标打开弹出窗口
-2. 在文本框中输入需要格式化的 PromQL 查询
-3. 点击"格式化"按钮
-4. 格式化后的查询会显示在下方
-5. 点击"复制结果"按钮可以复制格式化后的查询
+1. Click the extension icon in the toolbar to open the popup
+2. Enter your PromQL query in the text box
+3. Click the "Format" button
+4. Copy the formatted query using the "Copy Result" button
 
-## 安装方法
+## Installation
 
-### 从 Chrome 网上应用店安装
+### From Chrome Web Store
 
-1. 访问 Chrome 网上应用店（链接待添加）
-2. 点击"添加到 Chrome"按钮
+1. Visit the Chrome Web Store (link to be added)
+2. Click "Add to Chrome"
 
-### 手动安装（开发者模式）
+### Manual Installation (Developer Mode)
 
-1. 下载此仓库并解压缩
-2. 在 Chrome 中打开 `chrome://extensions/`
-3. 打开右上角的"开发者模式"
-4. 点击"加载已解压的扩展程序"
-5. 选择解压后的文件夹
+1. Clone this repository:
+   ```
+   git clone https://github.com/xhinliang/promql-formatter.git
+   ```
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Build the WebAssembly component:
+   ```
+   npm run build
+   ```
+4. Open Chrome and navigate to `chrome://extensions/`
+5. Enable "Developer mode" in the top-right corner
+6. Click "Load unpacked" and select the project folder
 
-## 隐私声明
+## Development
 
-此扩展不会收集或发送任何数据到外部服务器。所有的查询处理都在您的浏览器中本地完成。
+This project uses a Go-based PromQL parser compiled to WebAssembly for the formatting functionality.
 
-## 许可证
+### Project Structure
 
-此扩展使用 Apache 2.0 许可证。
+- `custom-promql-parser/` - Go code for the PromQL parser
+- `images/` - Extension icons
+- `*.js` files - Chrome extension JavaScript code
+- `*.html` files - Extension UI
+- `build.sh` - Script to build the WebAssembly component
 
-## 致谢
+### Available Scripts
 
-特别感谢 [o11y.tools](https://o11y.tools/) 提供的 PromQL 解析器，该工具使用官方的 Prometheus 库并编译为 WebAssembly。 
+- `npm run build` - Build the WebAssembly component
+- `npm run lint` - Run ESLint to check for code issues
+- `npm run lint:fix` - Automatically fix ESLint issues
+
+## Privacy Statement
+
+This extension does not collect or send any data to external servers. All query processing is done locally in your browser.
+
+## License
+
+This extension is licensed under the Apache 2.0 License.
+
+## Acknowledgements
+
+Special thanks to [o11y.tools](https://o11y.tools/) for providing the PromQL parser that uses the official Prometheus library compiled to WebAssembly.
