@@ -74,19 +74,19 @@
   </style>
 </head>
 <body>
-  <h2>PromQL 格式化工具</h2>
-  <p>输入 PromQL 查询，点击"格式化"按钮进行格式化</p>
+  <h2>PromQL Formatter Tool</h2>
+  <p>Enter PromQL query, click "Format" button to format</p>
   
-  <textarea id="input" placeholder="输入 PromQL 查询..."></textarea>
+  <textarea id="input" placeholder="Enter PromQL query..."></textarea>
   <div>
-    <button id="format" disabled>格式化</button>
-    <button id="copy" disabled>复制结果</button>
+    <button id="format" disabled>Format</button>
+    <button id="copy" disabled>Copy Result</button>
   </div>
   
   <div id="result"></div>
-  <div id="status">加载中 WASM 模块...</div>
+  <div id="status">Loading WASM module...</div>
   
-  <!-- 这些元素用于 WASM 代码调用，实际不会显示 -->
+  <!-- These elements are used for WASM code calls, they won't actually be displayed -->
   <div id="promqlInput" style="display: none;"></div>
   <div id="resultDiv" style="display: none;"></div>
   <div id="loadingWarning" style="display: none;"></div>

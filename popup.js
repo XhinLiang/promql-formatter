@@ -1,7 +1,7 @@
-// 全局变量，表示 WASM 模块是否已加载
+// Global variable to indicate if the WASM module is loaded
 let wasmLoaded = false;
 
-// 添加必要的 SVG 图标
+// Add necessary SVG icons
 document.body.insertAdjacentHTML('beforeend', `
     <svg style="display:none">
         <symbol id="gdoc_check" viewBox="0 0 24 24">
@@ -16,60 +16,60 @@ document.body.insertAdjacentHTML('beforeend', `
     </svg>
 `);
 
-// 确保全局对象存在
+// Ensure global object exists
 window.promqlparser = {};
 
-// 初始化 Go WASM 环境
+// Initialize Go WASM environment
 async function initWasm() {
   try {
-    // 创建必要的 DOM 元素
+    // Create necessary DOM elements
     createRequiredElements();
     
-    // 加载 Go 环境
+    // Load Go environment
     const go = new Go();
     
-    // 尝试使用 instantiateStreaming 加载 WASM
+    // Try to load WASM using instantiateStreaming
     try {
       const result = await WebAssembly.instantiateStreaming(
         fetch('promqlparser.wasm'),
         go.importObject
       );
       
-      console.log("开始运行 WASM 模块");
+      console.log("Starting WASM module");
       go.run(result.instance);
-      console.log("WASM 模块已成功加载");
+      console.log("WASM module successfully loaded");
       
-      // 检查全局函数
+      // Check global functions
       checkGlobalFunctions();
     } catch (streamingError) {
-      console.error("使用 instantiateStreaming 加载失败:", streamingError);
+      console.error("Failed to load using instantiateStreaming:", streamingError);
       
-      // 回退到传统方法
+      // Fallback to traditional method
       try {
         const response = await fetch('promqlparser.wasm');
         const bytes = await response.arrayBuffer();
         const result = await WebAssembly.instantiate(bytes, go.importObject);
         
-        console.log("使用传统方法开始运行 WASM 模块");
+        console.log("Starting WASM module using traditional method");
         go.run(result.instance);
-        console.log("WASM 模块已成功加载");
+        console.log("WASM module successfully loaded");
         
-        // 检查全局函数
+        // Check global functions
         checkGlobalFunctions();
       } catch (fallbackError) {
-        console.error("所有加载方法都失败:", fallbackError);
-        document.getElementById('status').textContent = '错误: 加载 WASM 模块失败 - ' + fallbackError.message;
+        console.error("All loading methods failed:", fallbackError);
+        document.getElementById('status').textContent = 'Error: Failed to load WASM module - ' + fallbackError.message;
       }
     }
   } catch (error) {
-    console.error('初始化过程中出错:', error);
-    document.getElementById('status').textContent = '错误: 初始化失败 - ' + error.message;
+    console.error('Error during initialization:', error);
+    document.getElementById('status').textContent = 'Error: Initialization failed - ' + error.message;
   }
 }
 
-// 创建 WASM 模块需要的 DOM 元素
+// Create DOM elements needed by the WASM module
 function createRequiredElements() {
-  // 创建必要的 DOM 元素
+  // Create necessary DOM elements
   const elements = [
     { id: 'runButton', hidden: false },
     { id: 'exampleButton', hidden: false },
@@ -91,32 +91,32 @@ function createRequiredElements() {
   }
 }
 
-// 检查全局函数是否已加载
+// Check if global functions are loaded
 function checkGlobalFunctions() {
   setTimeout(() => {
     if (typeof parsepromql === 'function') {
       wasmLoaded = true;
-      document.getElementById('status').textContent = 'WASM 模块已加载，可以使用了';
+      document.getElementById('status').textContent = 'WASM module loaded, ready to use';
       document.getElementById('format').disabled = false;
       
-      // 检查是否有来自后台脚本的待处理请求
+      // Check if there are pending requests from the background script
       checkPendingQuery();
     } else {
-      document.getElementById('status').textContent = '警告: 未找到 parsepromql 函数';
-      console.warn("未找到 parsepromql 函数，列出全局函数:", Object.keys(window).filter(key => 
+      document.getElementById('status').textContent = 'Warning: parsepromql function not found';
+      console.warn("parsepromql function not found, listing global functions:", Object.keys(window).filter(key => 
         typeof window[key] === 'function' && !key.startsWith('_')
       ));
     }
   }, 500);
 }
 
-// 格式化 PromQL 查询
+// Format PromQL query
 function formatPromQL(query) {
   if (typeof parsepromql === 'function') {
     try {
-      console.log("开始格式化查询:", query);
+      console.log("Starting to format query:", query);
       
-      // 确保 resultDiv 存在
+      // Ensure resultDiv exists
       let resultDiv = document.getElementById('resultDiv');
       if (!resultDiv) {
         resultDiv = document.createElement('div');
@@ -124,10 +124,10 @@ function formatPromQL(query) {
         document.body.appendChild(resultDiv);
       }
       
-      // 清空可能存在的旧内容
+      // Clear any existing content
       resultDiv.innerHTML = '';
       
-      // 尝试设置输入元素
+      // Try to set input element
       let inputElem = document.getElementById('promqlInput');
       if (!inputElem) {
         inputElem = document.createElement('textarea');
@@ -136,95 +136,95 @@ function formatPromQL(query) {
         document.body.appendChild(inputElem);
       }
       
-      // 设置输入值
+      // Set input value
       inputElem.value = query;
       
-      // 按照原始网站的方式调用 parsepromql 函数
-      console.log("使用原始网站的方式调用 parsepromql...");
+      // Call parsepromql function using original website's method
+      console.log("Calling parsepromql using original website's method...");
       parsepromql(query);
       
-      // 获取结果
+      // Get result
       const result = resultDiv.innerHTML;
-      console.log("格式化结果 HTML:", result);
+      console.log("Formatting result HTML:", result);
       
-      // 提取出格式化后的 PromQL (尝试不同的提取方式)
+      // Extract formatted PromQL (try different extraction methods)
       let formattedQuery = null;
       
-      // 方法1: 使用正则表达式提取代码块
+      // Method 1: Extract code block using regex
       const match = result.match(/<pre class="chroma"><code[^>]*>([\s\S]*?)<\/code><\/pre>/);
       if (match && match[1]) {
         formattedQuery = match[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-        console.log("方法1提取结果:", formattedQuery);
+        console.log("Method 1 extraction result:", formattedQuery);
       }
       
-      // 方法2: 从任何预格式化文本中提取
+      // Method 2: Extract from any pre-formatted text
       if (!formattedQuery) {
         const preMatch = result.match(/<pre[^>]*>([\s\S]*?)<\/pre>/);
         if (preMatch && preMatch[1]) {
           formattedQuery = preMatch[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-          console.log("方法2提取结果:", formattedQuery);
+          console.log("Method 2 extraction result:", formattedQuery);
         }
       }
       
-      // 方法3: 检查文本是否包含实际的代码内容
+      // Method 3: Check if text contains actual code content
       if (!formattedQuery) {
         const codeContent = result.match(/```[\s\S]*?```/);
         if (codeContent) {
           formattedQuery = codeContent[0].replace(/```/g, '').trim();
-          console.log("方法3提取结果:", formattedQuery);
+          console.log("Method 3 extraction result:", formattedQuery);
         }
       }
       
-      // 方法4: 直接从 innerText 获取内容
+      // Method 4: Get content directly from innerText
       if (!formattedQuery) {
         try {
-          // 创建临时元素
+          // Create a temporary element
           const temp = document.createElement('div');
           temp.innerHTML = result;
-          // 查找代码元素
+          // Find code element
           const codeElem = temp.querySelector('code') || temp.querySelector('pre');
           if (codeElem) {
             formattedQuery = codeElem.innerText;
-            console.log("方法4提取结果:", formattedQuery);
+            console.log("Method 4 extraction result:", formattedQuery);
           }
         } catch (e) {
-          console.error("方法4提取失败:", e);
+          console.error("Method 4 extraction failed:", e);
         }
       }
       
-      // 如果所有方法都失败，返回原始查询
+      // If all methods fail, return original query
       if (!formattedQuery || formattedQuery.trim() === query.trim()) {
-        console.log("提取格式化后的 PromQL 失败，返回原始查询");
+        console.log("Failed to extract formatted PromQL, returning original query");
         return query;
       }
       
       return formattedQuery;
     } catch (error) {
-      console.error("格式化过程中出错:", error);
+      console.error("Error during formatting:", error);
       throw error;
     }
   } else {
-    throw new Error('未找到 PromQL 格式化函数');
+    throw new Error('PromQL formatting function not found');
   }
 }
 
-// 检查是否有待处理的查询请求
+// Check if there are pending query requests
 function checkPendingQuery() {
   if (wasmLoaded && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get('pendingQuery', (data) => {
       if (data.pendingQuery) {
-        // 有待处理的查询，尝试格式化
+        // There are pending requests, try to format
         try {
           const formattedQuery = formatPromQL(data.pendingQuery);
           
-          // 将结果发送回后台脚本
+          // Send result back to background script
           chrome.runtime.sendMessage({
             action: 'formatPromQLResult',
             success: true,
             result: formattedQuery
           });
           
-          // 如果是从右键菜单启动的，完成后自动关闭弹出窗口
+          // If launched from right-click menu, close popup after completion
           chrome.storage.local.get(['isContextMenu', 'popupWindowId'], (contextData) => {
             if (contextData.isContextMenu && contextData.popupWindowId) {
               setTimeout(() => {
@@ -233,7 +233,7 @@ function checkPendingQuery() {
             }
           });
         } catch (error) {
-          // 出错时，发送错误信息
+          // Send error message if there's an error
           chrome.runtime.sendMessage({
             action: 'formatPromQLResult',
             success: false,
@@ -245,19 +245,19 @@ function checkPendingQuery() {
   }
 }
 
-// 初始化页面
+// Initialize page
 document.addEventListener('DOMContentLoaded', () => {
-  // 初始化 WASM
+  // Initialize WASM
   initWasm();
   
-  // 格式化按钮事件
+  // Format button event
   const formatButton = document.getElementById('format');
   formatButton.addEventListener('click', () => {
     const input = document.getElementById('input').value;
     const resultDiv = document.getElementById('result');
     
     if (!input.trim()) {
-      resultDiv.textContent = '请输入 PromQL 查询';
+      resultDiv.textContent = 'Please enter PromQL query';
       return;
     }
     
@@ -266,19 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
       resultDiv.textContent = formattedQuery;
       document.getElementById('copy').disabled = false;
     } catch (error) {
-      resultDiv.textContent = '错误: ' + error.message;
+      resultDiv.textContent = 'Error: ' + error.message;
     }
   });
   
-  // 复制结果按钮事件
+  // Copy result button event
   const copyButton = document.getElementById('copy');
   copyButton.addEventListener('click', () => {
     const resultText = document.getElementById('result').textContent;
     
-    // 复制到剪贴板
+    // Copy to clipboard
     navigator.clipboard.writeText(resultText).then(() => {
       const originalText = copyButton.textContent;
-      copyButton.textContent = '已复制!';
+      copyButton.textContent = 'Copied!';
       setTimeout(() => {
         copyButton.textContent = originalText;
       }, 1500);
