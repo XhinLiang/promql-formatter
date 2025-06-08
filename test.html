@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PromQL Parser Test</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        #resultDiv {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f8f8;
+        }
+        blockquote {
+            border-left: 5px solid #ccc;
+            margin: 0;
+            padding: 10px 20px;
+        }
+        .gdoc-hint {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .danger {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+        }
+        .tip {
+            background-color: #e8f5e9;
+            border-left: 5px solid #4caf50;
+        }
+        .gdoc-hint__title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            overflow: auto;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        #debugOutput {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f5f5f5;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>PromQL Parser Test</h1>
+    
+    <div id="loadingWarning">
+        Loading
+        
+        The application is loading. If this warning does not disappear, please make sure that your browser supports WASM and that javascript is enabled.
+    </div>
+    
+    <textarea id="promqlInput" style="width: 100%; height: 100px;" placeholder="输入 PromQL 查询...">sum(http_requests_total{status="500"})</textarea>
+    <div>
+        <button id="runButton">解析</button>
+        <button id="exampleButton">加载示例</button>
+        <button id="testParseButton">测试解析函数</button>
+        <button id="showFunctionsButton">显示全局函数</button>
+    </div>
+    
+    <div id="resultDiv"></div>
+    
+    <h2>调试输出:</h2>
+    <div id="debugOutput"></div>
+    
+    <h2>全局函数列表：</h2>
+    <pre id="globalFunctions"></pre>
+    
+    <script src="wasm_exec.js"></script>
+    <script>
+        // 添加必要的 SVG 图标
+        document.body.insertAdjacentHTML('beforeend', `
+            <svg style="display:none">
+                <symbol id="gdoc_check" viewBox="0 0 24 24">
+                    <path d="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41-1.41L9,16.17z"/>
+                </symbol>
+                <symbol id="gdoc_dangerous" viewBox="0 0 24 24">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </symbol>
+                <symbol id="gdoc_link" viewBox="0 0 24 24">
+                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                </symbol>
+            </svg>
+        `);
+        
+        // 调试日志函数
+        function log(message) {
+            const debugOutput = document.getElementById('debugOutput');
+            debugOutput.textContent += message + '\n';
+            console.log(message);
+        }
+        
+        // WebAssembly 初始化
+        if (!WebAssembly.instantiateStreaming) {
+            // polyfill
+            WebAssembly.instantiateStreaming = async (resp, importObject) => {
+                const source = await (await resp).arrayBuffer();
+                return await WebAssembly.instantiate(source, importObject);
+            };
+        }
+        
+        const go = new Go();
+        let wasmInstance;
+        
+        WebAssembly.instantiateStreaming(fetch("promqlparser.wasm"), go.importObject)
+            .then((result) => {
+                wasmInstance = result.instance;
+                try {
+                    go.run(wasmInstance);
+                    log("WASM loaded successfully");
+                    document.getElementById('loadingWarning').style.display = 'none';
+                    
+                    // 启用按钮
+                    document.getElementById('runButton').disabled = false;
+                    document.getElementById('exampleButton').disabled = false;
+                    document.getElementById('testParseButton').disabled = false;
+                    
+                    // 解析默认查询
+                    const defaultQuery = document.getElementById('promqlInput').value;
+                    if (defaultQuery.trim()) {
+                        log("尝试解析默认查询: " + defaultQuery);
+                        try {
+                            if (typeof parsepromql === 'function') {
+                                log("调用 parsepromql 函数...");
+                                parsepromql({}, [defaultQuery]);
+                                log("调用 parsepromql 函数完成");
+                            } else {
+                                log("警告: 未找到 parsepromql 函数");
+                            }
+                        } catch(e) {
+                            log("解析错误: " + e.message);
+                        }
+                    }
+                } catch (e) {
+                    log("Error running WASM: " + e.message);
+                    console.error("Error running WASM:", e);
+                }
+                
+                // 检查全局函数
+                setTimeout(() => {
+                    let globalFunctionsList = "";
+                    
+                    // 检查 window 对象
+                    for (let key in window) {
+                        if (typeof window[key] === 'function' && !key.startsWith('_')) {
+                            globalFunctionsList += `window.${key}\n`;
+                        }
+                    }
+                    
+                    document.getElementById("globalFunctions").textContent = globalFunctionsList;
+                }, 1000);
+            })
+            .catch(err => {
+                log("Failed to load WASM: " + err.message);
+                console.error("Failed to load WASM:", err);
+                document.getElementById("resultDiv").innerHTML = "Failed to load WASM: " + err.message;
+            });
+        
+        // 测试解析函数按钮
+        document.getElementById('testParseButton').addEventListener('click', () => {
+            const query = document.getElementById('promqlInput').value;
+            log("测试解析函数，查询: " + query);
+            
+            // 清空结果区域
+            document.getElementById('resultDiv').innerHTML = '';
+            
+            // 尝试不同的调用方式
+            if (typeof parsepromql === 'function') {
+                try {
+                    log("1. 尝试调用方式: parsepromql({}, [query])");
+                    parsepromql({}, [query]);
+                    log("结果 HTML: " + document.getElementById('resultDiv').innerHTML);
+                    
+                    document.getElementById('resultDiv').innerHTML = '';
+                    log("2. 尝试调用方式: parsepromql(query)");
+                    parsepromql(query);
+                    log("结果 HTML: " + document.getElementById('resultDiv').innerHTML);
+                    
+                    document.getElementById('resultDiv').innerHTML = '';
+                    log("3. 尝试调用方式: parsepromql()");
+                    parsepromql();
+                    log("结果 HTML: " + document.getElementById('resultDiv').innerHTML);
+                } catch(e) {
+                    log("解析错误: " + e.message);
+                }
+            } else {
+                log("未找到 parsepromql 函数");
+                
+                // 查找所有可能的函数
+                const possibleFunctions = [];
+                for (let key in window) {
+                    if (typeof window[key] === 'function' && 
+                        (key.includes('parse') || key.includes('format') || key.includes('prom'))) {
+                        possibleFunctions.push(key);
+                    }
+                }
+                
+                if (possibleFunctions.length > 0) {
+                    log("找到以下可能的函数: " + possibleFunctions.join(', '));
+                    
+                    // 尝试调用这些函数
+                    for (const funcName of possibleFunctions) {
+                        log(`尝试调用 ${funcName}`);
+                        try {
+                            window[funcName](query);
+                            log(`${funcName} 调用成功，结果: ` + document.getElementById('resultDiv').innerHTML);
+                        } catch(e) {
+                            log(`${funcName} 调用失败: ` + e.message);
+                        }
+                    }
+                } else {
+                    log("未找到任何可能的解析函数");
+                }
+            }
+        });
+        
+        // 显示全局函数
+        document.getElementById('showFunctionsButton').addEventListener('click', () => {
+            let funcs = [];
+            for (let key in window) {
+                if (typeof window[key] === 'function' && !key.startsWith('_')) {
+                    funcs.push(key);
+                }
+            }
+            log("全局函数列表: " + funcs.join(', '));
+        });
+    </script>
+</body>
+</html> 
