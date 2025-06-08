@@ -26,11 +26,6 @@ A Chrome extension that helps you format PromQL queries to make them more readab
 
 ## Installation
 
-### From Chrome Web Store
-
-1. Visit the Chrome Web Store (link to be added)
-2. Click "Add to Chrome"
-
 ### Manual Installation (Developer Mode)
 
 1. Clone this repository:
