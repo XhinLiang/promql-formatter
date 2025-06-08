@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-# 进入 custom-promql-parser 目录
+# Enter the custom-promql-parser directory
 cd "$(dirname "$0")/custom-promql-parser"
 
-echo "正在初始化 Go 模块..."
+echo "Initializing Go module..."
 go mod tidy
 
-echo "设置 WASM 编译环境..."
+echo "Setting up WASM compilation environment..."
 GOOS=js GOARCH=wasm go build -o ../promqlparser.wasm .
 
-echo "编译完成：promqlparser.wasm"
-echo "文件已输出到项目根目录" 
+echo "Compilation complete: promqlparser.wasm"
+echo "File has been output to the project root directory" 
