@@ -2,25 +2,88 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/prometheus/prometheus/promql/parser"
 )
 
+// 用于存储变量替换的全局映射
+type varMapping struct {
+	placeholderToVar map[string]string
+	replacedQuery    string
+}
+
 // formatPromql takes a PromQL query string and returns a "prettified" version.
 func formatPromql(promql string) (string, error) {
-	expr, err := parser.ParseExpr(promql)
+	// 先修复 offset 位置问题，对所有查询都执行此操作
+	promql = fixOffsetPosition(promql)
+
+	mapping := replaceVariables(promql)
+	expr, err := parser.ParseExpr(mapping.replacedQuery)
+	// 如果解析失败，直接返回原始查询
 	if err != nil {
-		return "", err
+		return promql, nil
 	}
 
-	// For simple expressions, use the built-in Pretty formatter
+	// 格式化表达式
+	var formatted string
 	if isSimpleExpr(expr) {
-		return expr.Pretty(0), nil
+		formatted = expr.Pretty(0)
+	} else {
+		formatted = customFormat(expr, 0)
 	}
 
-	// For complex expressions, use our custom formatter
-	return customFormat(expr, 0), nil
+	// 如果需要，恢复变量
+	for placeholder, variable := range mapping.placeholderToVar {
+		formatted = strings.ReplaceAll(formatted, placeholder, variable)
+	}
+
+	return formatted, nil
+}
+
+// replaceVariables 替换查询中的所有变量，返回映射关系
+func replaceVariables(query string) varMapping {
+	placeholderToVar := make(map[string]string)
+	replacedQuery := query
+
+	// 替换所有的 $变量
+	varRegex := regexp.MustCompile(`\$__[a-zA-Z0-9_]+`)
+	result := varRegex.ReplaceAllStringFunc(query, func(match string) string {
+		placeholder := fmt.Sprintf("VAR%d", len(placeholderToVar))
+		placeholderToVar[placeholder] = match
+		return placeholder
+	})
+
+	replacedQuery = result
+
+	return varMapping{
+		placeholderToVar: placeholderToVar,
+		replacedQuery:    replacedQuery,
+	}
+}
+
+// fixOffsetPosition 修复 offset 位置问题
+// 将 "metric[time]) offset time" 修改为 "metric[time] offset time)"
+func fixOffsetPosition(query string) string {
+	// 匹配模式：寻找 [时间范围] 后面紧跟一个或多个右括号，然后是 offset 和时间单位
+	regex := regexp.MustCompile(`(\[[^\]]+\])(\)+)\s+offset\s+([a-zA-Z0-9_$][a-zA-Z0-9_$]*)`)
+
+	// 替换为：[时间范围] offset 时间单位 + 相同数量的右括号
+	result := regex.ReplaceAllStringFunc(query, func(match string) string {
+		submatches := regex.FindStringSubmatch(match)
+		if len(submatches) < 4 {
+			return match // 如果没有匹配到预期的组，返回原字符串
+		}
+
+		timeRange := submatches[1]       // [1m] 或 [$__interval]
+		closingBrackets := submatches[2] // ) 或 )) 等
+		offsetTime := submatches[3]      // 1d 或 $interval 等
+
+		return fmt.Sprintf("%s offset %s%s", timeRange, offsetTime, closingBrackets)
+	})
+
+	return result
 }
 
 // isSimpleExpr checks if an expression is simple enough to use the built-in formatter
@@ -62,7 +125,11 @@ func customFormat(expr parser.Expr, level int) string {
 	case *parser.AggregateExpr:
 		grouping := strings.Join(e.Grouping, ", ")
 		var by string
-		by = fmt.Sprintf("by (%s)", grouping)
+		if e.Without {
+			by = fmt.Sprintf("without (%s)", grouping)
+		} else {
+			by = fmt.Sprintf("by (%s)", grouping)
+		}
 
 		param := customFormat(e.Expr, level)
 		return fmt.Sprintf("sum %s (%s)", by, param)

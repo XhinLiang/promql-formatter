@@ -54,6 +54,36 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 `,
 			expectError: false,
 		},
+		{
+			name:        "query with offset",
+			input:       `sum by (region) (rate(some_metric{service="someservice-bff"}[1m] offset 1d))`,
+			expected:    `sum by (region) (rate(some_metric{service="someservice-bff"}[1m] offset 1d))`,
+			expectError: false,
+		},
+		{
+			name:        "adjust sum by",
+			input:       `sum(rate(some_metric{service="someservice-bff"}[1m] offset 1d)) by (region)`,
+			expected:    `sum by (region) (rate(some_metric{service="someservice-bff"}[1m] offset 1d))`,
+			expectError: false,
+		},
+		{
+			name:        "auto fix offset position",
+			input:       `sum by (region) (rate(some_metric{service="someservice-bff"}[1m])) offset 1d`,
+			expected:    `sum by (region) (rate(some_metric{service="someservice-bff"}[1m] offset 1d))`,
+			expectError: false,
+		},
+		{
+			name:        "auto fix offset position",
+			input:       `sum by (region) (rate(some_metric{service="someservice-bff"}[$__interval])) offset 1d`,
+			expected:    `sum by (region) (rate(some_metric{service="someservice-bff"}[$__interval] offset 1d))`,
+			expectError: false,
+		},
+		{
+			name:        "auto fix offset position",
+			input:       `sum by (region) (rate(some_metric{service="$service"}[1m])) offset 1d`,
+			expected:    `sum by (region) (rate(some_metric{service="$service"}[1m] offset 1d))`,
+			expectError: false,
+		},
 	}
 
 	for _, tc := range testCases {
