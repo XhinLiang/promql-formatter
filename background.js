@@ -3,7 +3,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "formatPromQL",
     title: "Format PromQL",
-    contexts: ["selection", "editable"]
+    contexts: ["all"]
   });
 });
 
