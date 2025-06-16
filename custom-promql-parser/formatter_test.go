@@ -84,6 +84,12 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 			expected:    `sum by (region) (rate(some_metric{service="$service"}[1m] offset 1d))`,
 			expectError: false,
 		},
+		{
+			name:        "auto fix offset position 4",
+			input:       `sum(increase(ads_filter_after_total{env="live", region="id"}[10m])) by (bundle) offset 1w`,
+			expected:    `sum by (bundle) (increase(ads_filter_after_total{env="live",region="id"}[10m] offset 1w))`,
+			expectError: false,
+		},
 	}
 
 	for _, tc := range testCases {

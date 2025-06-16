@@ -64,22 +64,54 @@ func replaceVariables(query string) varMapping {
 
 // fixOffsetPosition fixes the position of offset in the query
 // Changes "metric[time]) offset time" to "metric[time] offset time)"
+// Also handles cases with by clauses like "metric[time])) by (bundle) offset time"
 func fixOffsetPosition(query string) string {
-	// Match pattern: [time range] followed by one or more closing brackets, then offset and time unit
-	regex := regexp.MustCompile(`(\[[^\]]+\])(\)+)\s+offset\s+([a-zA-Z0-9_$][a-zA-Z0-9_$]*)`)
+	// First, handle "aggr_op(...)) by (...) offset" pattern - works with any aggregation operator
+	aggrByRegex := regexp.MustCompile(`([a-zA-Z_][a-zA-Z0-9_]*)\(([^()]+\([^()]+\[[^\]]+\](?:\s*\)+))\)\s+by\s+\(([^)]+)\)\s+offset\s+([a-zA-Z0-9_$][a-zA-Z0-9_$]*)`)
+	query = aggrByRegex.ReplaceAllStringFunc(query, func(match string) string {
+		submatches := aggrByRegex.FindStringSubmatch(match)
+		if len(submatches) < 5 {
+			return match
+		}
+
+		aggrOp := submatches[1]     // The aggregation operator (sum, avg, etc.)
+		innerExpr := submatches[2]  // What's inside aggr_op(...)
+		byLabels := submatches[3]   // What's inside by (...)
+		offsetTime := submatches[4] // The offset time value
+
+		// Find the last bracket pattern
+		bracketRegex := regexp.MustCompile(`(\[[^\]]+\])\s*(\)+)?$`)
+		replaced := bracketRegex.ReplaceAllString(innerExpr, fmt.Sprintf("$1 offset %s$2", offsetTime))
+
+		return fmt.Sprintf("%s by (%s) (%s)", aggrOp, byLabels, replaced)
+	})
+
+	// Match pattern: [time range] followed by one or more closing brackets,
+	// optional "by (labels)" or similar clause, then offset and time unit
+	// Now also captures the potential aggregation operator
+	offsetRegex := regexp.MustCompile(`(?:([a-zA-Z_][a-zA-Z0-9_]*)\()?([^{(]*\{[^}]*\})?(\[[^\]]+\])(\)+)(?:\s+(?:by|without)\s+\([^)]+\))?\s+offset\s+([a-zA-Z0-9_$][a-zA-Z0-9_$]*)`)
 
 	// Replace with: [time range] offset time unit + same number of closing brackets
-	return regex.ReplaceAllStringFunc(query, func(match string) string {
-		submatches := regex.FindStringSubmatch(match)
-		if len(submatches) < 4 {
+	// preserving any aggregation operator
+	return offsetRegex.ReplaceAllStringFunc(query, func(match string) string {
+		submatches := offsetRegex.FindStringSubmatch(match)
+		if len(submatches) < 6 {
 			return match // If expected groups not matched, return original string
 		}
 
-		timeRange := submatches[1]       // [1m] or [$__interval]
-		closingBrackets := submatches[2] // ) or )) etc.
-		offsetTime := submatches[3]      // 1d or $interval etc.
+		aggrOp := submatches[1]          // Optional aggregation operator
+		metricSelector := submatches[2]  // Optional metric selector with labels
+		timeRange := submatches[3]       // [1m] or [$__interval]
+		closingBrackets := submatches[4] // ) or )) etc.
+		offsetTime := submatches[5]      // 1d or $interval etc.
 
-		return fmt.Sprintf("%s offset %s%s", timeRange, offsetTime, closingBrackets)
+		if aggrOp != "" && metricSelector != "" {
+			return fmt.Sprintf("%s(%s%s offset %s%s", aggrOp, metricSelector, timeRange, offsetTime, closingBrackets)
+		} else if metricSelector != "" {
+			return fmt.Sprintf("%s%s offset %s%s", metricSelector, timeRange, offsetTime, closingBrackets)
+		} else {
+			return fmt.Sprintf("%s offset %s%s", timeRange, offsetTime, closingBrackets)
+		}
 	})
 }
 
