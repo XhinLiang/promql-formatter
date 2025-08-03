@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:pkg.go.dev)",
+      "Bash(cp:*)",
+      "Bash(cd:*)",
+      "Bash(go test:*)",
+      "Bash(go run:*)",
+      "Bash(rm:*)",
+      "Bash(./init)",
+      "Bash(ls:*)",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}

@@ -8,10 +8,217 @@ import (
 	"github.com/prometheus/prometheus/promql/parser"
 )
 
-// varMapping stores the mapping between placeholder and original variable names
-type varMapping struct {
+// VariableManager handles variable substitution and restoration
+type VariableManager struct {
 	placeholderToVar map[string]string
-	replacedQuery    string
+	counter          int
+}
+
+// NewVariableManager creates a new variable manager
+func NewVariableManager() *VariableManager {
+	return &VariableManager{
+		placeholderToVar: make(map[string]string),
+	}
+}
+
+// ReplaceVariables replaces variables with placeholders and returns the modified query
+func (vm *VariableManager) ReplaceVariables(query string) string {
+	// Match both $__name and $name variable formats
+	varRegex := regexp.MustCompile(`\$(?:__)?[a-zA-Z0-9_]+`)
+	return varRegex.ReplaceAllStringFunc(query, func(match string) string {
+		placeholder := fmt.Sprintf("VAR%d", vm.counter)
+		vm.placeholderToVar[placeholder] = match
+		vm.counter++
+		return placeholder
+	})
+}
+
+// RestoreVariables restores original variables in the formatted output
+func (vm *VariableManager) RestoreVariables(formatted string) string {
+	for placeholder, variable := range vm.placeholderToVar {
+		formatted = strings.ReplaceAll(formatted, placeholder, variable)
+	}
+	return formatted
+}
+
+// FormatOptions contains formatting configuration
+type FormatOptions struct {
+	IndentSize    int
+	MaxLineLength int
+}
+
+// FormatterVisitor implements the visitor pattern for AST-based formatting
+type FormatterVisitor struct {
+	output  strings.Builder
+	indent  int
+	options FormatOptions
+}
+
+// NewFormatterVisitor creates a new formatter visitor
+func NewFormatterVisitor(options FormatOptions) *FormatterVisitor {
+	return &FormatterVisitor{
+		options: options,
+	}
+}
+
+// writeIndent writes indentation to the output
+func (v *FormatterVisitor) writeIndent() {
+	for i := 0; i < v.indent*v.options.IndentSize; i++ {
+		v.output.WriteByte(' ')
+	}
+}
+
+// increaseIndent increases the indentation level
+func (v *FormatterVisitor) increaseIndent() {
+	v.indent++
+}
+
+// decreaseIndent decreases the indentation level
+func (v *FormatterVisitor) decreaseIndent() {
+	if v.indent > 0 {
+		v.indent--
+	}
+}
+
+// Result returns the formatted string
+func (v *FormatterVisitor) Result() string {
+	return v.output.String()
+}
+
+// formatExprAST formats an expression using AST visitor pattern
+func (v *FormatterVisitor) formatExprAST(expr parser.Expr) {
+	switch e := expr.(type) {
+	case *parser.BinaryExpr:
+		v.formatBinaryExprAST(e)
+	case *parser.ParenExpr:
+		v.formatParenExprAST(e)
+	case *parser.AggregateExpr:
+		v.formatAggregateExprAST(e)
+	case *parser.Call:
+		v.formatCallAST(e)
+	case *parser.VectorSelector:
+		v.output.WriteString(e.String())
+	case *parser.MatrixSelector:
+		v.output.WriteString(e.String())
+	case *parser.NumberLiteral:
+		v.output.WriteString(e.String())
+	case *parser.StringLiteral:
+		v.output.WriteString(e.String())
+	default:
+		v.output.WriteString(expr.String())
+	}
+}
+
+// formatBinaryExprAST formats binary expressions with proper spacing and structure
+func (v *FormatterVisitor) formatBinaryExprAST(expr *parser.BinaryExpr) {
+	op := expr.Op.String()
+	
+	switch {
+	case op == "and" || op == "or":
+		// Logical operators get special formatting
+		v.formatExprAST(expr.LHS)
+		v.output.WriteString("\n\n")
+		v.output.WriteString(op)
+		
+		// Handle vector matching
+		if expr.VectorMatching != nil && len(expr.VectorMatching.MatchingLabels) > 0 {
+			v.output.WriteString("\n\n")
+			if expr.VectorMatching.On {
+				v.output.WriteString("on(")
+			} else {
+				v.output.WriteString("ignoring(")
+			}
+			v.output.WriteString(strings.Join(expr.VectorMatching.MatchingLabels, ","))
+			v.output.WriteString(") ")
+		}
+		
+		v.output.WriteString("\n\n")
+		v.formatExprAST(expr.RHS)
+		
+	case op == "/":
+		// Division gets line breaks
+		v.formatExprAST(expr.LHS)
+		v.output.WriteByte('\n')
+		v.writeIndent()
+		v.output.WriteString("/\n")
+		v.formatExprAST(expr.RHS)
+		
+	case op == "-":
+		// Subtraction gets line breaks
+		v.formatExprAST(expr.LHS)
+		v.output.WriteByte('\n')
+		v.writeIndent()
+		v.output.WriteString("-\n")
+		v.formatExprAST(expr.RHS)
+		
+	case isComparisonOperator(op):
+		// Comparison operators
+		v.formatExprAST(expr.LHS)
+		v.output.WriteByte('\n')
+		v.writeIndent()
+		v.output.WriteString(op)
+		v.output.WriteByte(' ')
+		v.formatExprAST(expr.RHS)
+		
+	default:
+		// Default formatting
+		v.formatExprAST(expr.LHS)
+		v.output.WriteByte(' ')
+		v.output.WriteString(op)
+		v.output.WriteByte(' ')
+		v.formatExprAST(expr.RHS)
+	}
+}
+
+// formatParenExprAST formats parenthesized expressions
+func (v *FormatterVisitor) formatParenExprAST(expr *parser.ParenExpr) {
+	v.output.WriteByte('(')
+	v.output.WriteByte('\n')
+	v.increaseIndent()
+	v.writeIndent()
+	v.formatExprAST(expr.Expr)
+	v.decreaseIndent()
+	v.output.WriteByte('\n')
+	v.writeIndent()
+	v.output.WriteByte(')')
+}
+
+// formatAggregateExprAST formats aggregate expressions
+func (v *FormatterVisitor) formatAggregateExprAST(expr *parser.AggregateExpr) {
+	v.output.WriteString(expr.Op.String())
+	
+	// Add grouping clause
+	if len(expr.Grouping) > 0 {
+		v.output.WriteByte(' ')
+		if expr.Without {
+			v.output.WriteString("without (")
+		} else {
+			v.output.WriteString("by (")
+		}
+		v.output.WriteString(strings.Join(expr.Grouping, ", "))
+		v.output.WriteString(") ")
+	} else {
+		v.output.WriteByte(' ')
+	}
+	
+	v.output.WriteByte('(')
+	v.formatExprAST(expr.Expr)
+	v.output.WriteByte(')')
+}
+
+// formatCallAST formats function calls
+func (v *FormatterVisitor) formatCallAST(expr *parser.Call) {
+	v.output.WriteString(expr.Func.Name)
+	v.output.WriteByte('(')
+	
+	for i, arg := range expr.Args {
+		if i > 0 {
+			v.output.WriteString(", ")
+		}
+		v.formatExprAST(arg)
+	}
+	
+	v.output.WriteByte(')')
 }
 
 // formatPromql takes a PromQL query string and returns a "prettified" version.
@@ -20,47 +227,36 @@ func formatPromql(promql string) (string, error) {
 	promql = fixOffsetPosition(promql)
 
 	// Replace variables to avoid parser issues
-	mapping := replaceVariables(promql)
-	expr, err := parser.ParseExpr(mapping.replacedQuery)
+	varManager := NewVariableManager()
+	cleanedQuery := varManager.ReplaceVariables(promql)
+	expr, err := parser.ParseExpr(cleanedQuery)
 
 	// If parsing fails, return the original query
 	if err != nil {
 		return promql, nil
 	}
 
-	// Format the expression
+	// Format the expression using new AST-based formatter
 	var formatted string
 	if isSimpleExpr(expr) {
 		formatted = expr.Pretty(0)
 	} else {
-		formatted = customFormat(expr, 0)
+		// Use new AST-based formatter
+		options := FormatOptions{
+			IndentSize:    4,
+			MaxLineLength: 80,
+		}
+		visitor := NewFormatterVisitor(options)
+		visitor.formatExprAST(expr)
+		formatted = visitor.Result()
 	}
 
 	// Restore original variables
-	for placeholder, variable := range mapping.placeholderToVar {
-		formatted = strings.ReplaceAll(formatted, placeholder, variable)
-	}
+	formatted = varManager.RestoreVariables(formatted)
 
 	return formatted, nil
 }
 
-// replaceVariables replaces all variables in the query to avoid parsing issues
-func replaceVariables(query string) varMapping {
-	placeholderToVar := make(map[string]string)
-
-	// Match both $__name and $name variable formats
-	varRegex := regexp.MustCompile(`\$(?:__)?[a-zA-Z0-9_]+`)
-	replacedQuery := varRegex.ReplaceAllStringFunc(query, func(match string) string {
-		placeholder := fmt.Sprintf("VAR%d", len(placeholderToVar))
-		placeholderToVar[placeholder] = match
-		return placeholder
-	})
-
-	return varMapping{
-		placeholderToVar: placeholderToVar,
-		replacedQuery:    replacedQuery,
-	}
-}
 
 // fixOffsetPosition fixes the position of offset in the query
 // Changes "metric[time]) offset time" to "metric[time] offset time)"
@@ -130,119 +326,6 @@ func isSimpleExpr(expr parser.Expr) bool {
 	}
 }
 
-// customFormat formats a PromQL expression with custom indentation and line breaks
-func customFormat(expr parser.Expr, level int) string {
-	switch e := expr.(type) {
-	case *parser.BinaryExpr:
-		return formatBinaryExpr(e, level)
-
-	case *parser.ParenExpr:
-		return formatParenExpr(e, level)
-
-	case *parser.Call:
-		var builder strings.Builder
-		builder.WriteString(e.Func.Name)
-		builder.WriteByte('(')
-
-		for i, arg := range e.Args {
-			if i > 0 {
-				builder.WriteString(", ")
-			}
-			builder.WriteString(customFormat(arg, level+1))
-		}
-
-		builder.WriteByte(')')
-		return builder.String()
-
-	case *parser.AggregateExpr:
-		var builder strings.Builder
-		builder.WriteString("sum ")
-
-		// Format grouping clause
-		grouping := strings.Join(e.Grouping, ", ")
-		if e.Without {
-			fmt.Fprintf(&builder, "without (%s) ", grouping)
-		} else {
-			fmt.Fprintf(&builder, "by (%s) ", grouping)
-		}
-
-		// Format the aggregation parameter
-		builder.WriteByte('(')
-		builder.WriteString(customFormat(e.Expr, level))
-		builder.WriteByte(')')
-
-		return builder.String()
-
-	// For simple expressions, use the default String() method
-	default:
-		return expr.String()
-	}
-}
-
-// formatBinaryExpr formats a binary expression with appropriate spacing and indentation
-func formatBinaryExpr(expr *parser.BinaryExpr, level int) string {
-	indent := strings.Repeat("    ", level)
-	left := customFormat(expr.LHS, level)
-	right := customFormat(expr.RHS, level)
-	op := expr.Op.String()
-
-	var builder strings.Builder
-
-	// Handle different operator types with consistent formatting
-	switch {
-	// Logical operators get double newlines for better readability
-	case op == "and" || op == "or":
-		fmt.Fprintf(&builder, "%s\n\n%s", left, op)
-		
-		// Handle vector matching (on/ignoring clause)
-		if expr.VectorMatching != nil && len(expr.VectorMatching.MatchingLabels) > 0 {
-			if expr.VectorMatching.On {
-				fmt.Fprintf(&builder, "\n\non(%s) ", strings.Join(expr.VectorMatching.MatchingLabels, ","))
-			} else {
-				fmt.Fprintf(&builder, "\n\nignoring(%s) ", strings.Join(expr.VectorMatching.MatchingLabels, ","))
-			}
-		}
-		
-		fmt.Fprintf(&builder, "\n\n%s", right)
-
-	// Division gets specific formatting
-	case op == "/":
-		fmt.Fprintf(&builder, "%s\n%s/\n%s", left, indent, right)
-
-	// Subtraction gets specific formatting
-	case op == "-":
-		fmt.Fprintf(&builder, "%s\n%s-\n%s", left, indent, right)
-
-	// Comparison operators
-	case isComparisonOperator(op):
-		fmt.Fprintf(&builder, "%s\n%s%s %s", left, indent, op, right)
-
-	// Default formatting for other operators
-	default:
-		fmt.Fprintf(&builder, "%s %s %s", left, op, right)
-	}
-
-	return builder.String()
-}
-
-// formatParenExpr formats a parenthesized expression with the desired style
-func formatParenExpr(expr *parser.ParenExpr, level int) string {
-	indent := strings.Repeat("    ", level)
-	innerIndent := strings.Repeat("    ", level+1)
-	inner := customFormat(expr.Expr, level+1)
-
-	var builder strings.Builder
-
-	builder.WriteByte('(')
-	builder.WriteByte('\n')
-	builder.WriteString(innerIndent)
-	builder.WriteString(inner)
-	builder.WriteByte('\n')
-	builder.WriteString(indent)
-	builder.WriteByte(')')
-
-	return builder.String()
-}
 
 // isComparisonOperator checks if the operator is a comparison operator
 func isComparisonOperator(op string) bool {
