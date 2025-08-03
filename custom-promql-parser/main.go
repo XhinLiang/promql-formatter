@@ -20,10 +20,20 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"syscall/js"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "debug" {
+		testInput := `(sum(increase(pass_rcmd_gps{l0="true"}[1m])) by (l1) / sum(increase(pass_rcmd_gps{}[1m])) by (l1) < 0.2) and on(l1) 
+( 
+  sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
+)`
+		debugParse(testInput)
+		return
+	}
+
 	c := make(chan struct{}, 0)
 
 	js.Global().Set("parsepromql", js.FuncOf(parsePromQL))

@@ -192,7 +192,18 @@ func formatBinaryExpr(expr *parser.BinaryExpr, level int) string {
 	switch {
 	// Logical operators get double newlines for better readability
 	case op == "and" || op == "or":
-		fmt.Fprintf(&builder, "%s\n\n%s\n\n%s", left, op, right)
+		fmt.Fprintf(&builder, "%s\n\n%s", left, op)
+		
+		// Handle vector matching (on/ignoring clause)
+		if expr.VectorMatching != nil && len(expr.VectorMatching.MatchingLabels) > 0 {
+			if expr.VectorMatching.On {
+				fmt.Fprintf(&builder, "\n\non(%s) ", strings.Join(expr.VectorMatching.MatchingLabels, ","))
+			} else {
+				fmt.Fprintf(&builder, "\n\nignoring(%s) ", strings.Join(expr.VectorMatching.MatchingLabels, ","))
+			}
+		}
+		
+		fmt.Fprintf(&builder, "\n\n%s", right)
 
 	// Division gets specific formatting
 	case op == "/":

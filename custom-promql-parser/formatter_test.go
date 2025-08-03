@@ -98,18 +98,19 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
   sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
 )`,
 			expected: `(
-	sum by (l1) (increase(pass_rcmd_gps{l0="true"}[1m]))  
+	sum by (l1) (increase(pass_rcmd_gps{l0="true"}[1m]))
 	/
-	sum by (l1) (increase(pass_rcmd_gps{}[1m])) 
-    < 
-    0.2
-) 
+	sum by (l1) (increase(pass_rcmd_gps[1m]))
+	< 0.2
+)
 
 and
 
 on(l1) 
-( 
-  sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
+
+(
+	sum by (l1) (increase(pass_rcmd_gps[1m]))
+	> 10
 )`,
 			expectError: false,
 		},
