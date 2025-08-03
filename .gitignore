@@ -58,4 +58,7 @@ local.properties
 .eslintcache
 
 # Prettier cache
-.prettier-cache 
+.prettier-cache
+
+# Claude settings
+.claude/settings.local.json

@@ -30,7 +30,12 @@ func main() {
 ( 
   sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
 )`
-		debugParse(testInput)
+		result, err := formatPromql(testInput)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Printf("Result:\n%s\n", result)
+		}
 		return
 	}
 
