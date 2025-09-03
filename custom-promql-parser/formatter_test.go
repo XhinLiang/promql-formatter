@@ -90,11 +90,35 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 			expected:    `sum by (bundle) (increase(ads_filter_after_total{env="live",region="id"}[10m] offset 1w))`,
 			expectError: false,
 		},
+
+		{
+			name: "complex query with on",
+			input: `(sum(increase(pass_rcmd_gps{l0="true"}[1m])) by (l1) / sum(increase(pass_rcmd_gps{}[1m])) by (l1) < 0.2) and on(l1) 
+( 
+  sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
+)`,
+			expected: `(
+	sum by (l1) (increase(pass_rcmd_gps{l0="true"}[1m]))
+	/
+	sum by (l1) (increase(pass_rcmd_gps[1m]))
+	< 0.2
+)
+
+and
+
+on(l1) 
+
+(
+	sum by (l1) (increase(pass_rcmd_gps[1m]))
+	> 10
+)`,
+			expectError: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pretty, err := formatPromql(tc.input)
+			pretty, err := formatPromqlMain(tc.input)
 
 			if tc.expectError {
 				if err == nil {
