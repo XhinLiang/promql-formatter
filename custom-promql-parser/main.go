@@ -48,8 +48,12 @@ func parsePromQL(this js.Value, args []js.Value) interface{} {
 	res := jsDoc.Call("getElementById", "resultDiv")
 
 	promql := args[0].String()
+	formatterType := "main" // default formatter
+	if len(args) > 1 && !args[1].IsUndefined() {
+		formatterType = args[1].String()
+	}
 
-	pretty, err := formatPromql(promql)
+	pretty, err := formatPromql(promql, formatterType)
 
 	if err != nil {
 		res.Set("innerHTML", fmt.Sprintf(`

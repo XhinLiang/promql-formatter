@@ -111,10 +111,10 @@ function checkGlobalFunctions() {
 }
 
 // Format PromQL query
-function formatPromQL(query) {
+function formatPromQL(query, formatterType = 'main') {
   if (typeof parsepromql === 'function') {
     try {
-      console.log("Starting to format query:", query);
+      console.log("Starting to format query:", query, "with formatter:", formatterType);
       
       // Ensure resultDiv exists
       let resultDiv = document.getElementById('resultDiv');
@@ -139,9 +139,9 @@ function formatPromQL(query) {
       // Set input value
       inputElem.value = query;
       
-      // Call parsepromql function using original website's method
+      // Call parsepromql function with formatter type
       console.log("Calling parsepromql using original website's method...");
-      parsepromql(query);
+      parsepromql(query, formatterType);
       
       // Get result
       const result = resultDiv.innerHTML;
@@ -211,11 +211,12 @@ function formatPromQL(query) {
 // Check if there are pending query requests
 function checkPendingQuery() {
   if (wasmLoaded && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get('pendingQuery', (data) => {
+    chrome.storage.local.get(['pendingQuery', 'selectedFormatter'], (data) => {
       if (data.pendingQuery) {
         // There are pending requests, try to format
         try {
-          const formattedQuery = formatPromQL(data.pendingQuery);
+          const formatterType = data.selectedFormatter || 'main';
+          const formattedQuery = formatPromQL(data.pendingQuery, formatterType);
           
           // Send result back to background script
           chrome.runtime.sendMessage({
@@ -250,11 +251,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize WASM
   initWasm();
   
+  // Load saved formatter preference
+  if (chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get('selectedFormatter', (data) => {
+      const formatterSelect = document.getElementById('formatter-select');
+      if (data.selectedFormatter && formatterSelect) {
+        formatterSelect.value = data.selectedFormatter;
+      }
+    });
+  }
+  
   // Format button event
   const formatButton = document.getElementById('format');
   formatButton.addEventListener('click', () => {
     const input = document.getElementById('input').value;
     const resultDiv = document.getElementById('result');
+    const formatterSelect = document.getElementById('formatter-select');
+    const selectedFormatter = formatterSelect.value;
     
     if (!input.trim()) {
       resultDiv.textContent = 'Please enter PromQL query';
@@ -262,9 +275,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      const formattedQuery = formatPromQL(input);
+      const formattedQuery = formatPromQL(input, selectedFormatter);
       resultDiv.textContent = formattedQuery;
       document.getElementById('copy').disabled = false;
+      
+      // Save selected formatter to storage for future use
+      if (chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ selectedFormatter: selectedFormatter });
+      }
     } catch (error) {
       resultDiv.textContent = 'Error: ' + error.message;
     }

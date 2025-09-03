@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>PromQL Formatter Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; }
+        select { padding: 5px; margin: 0 10px; }
+        button { padding: 8px 15px; margin: 5px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>PromQL Formatter Test</h1>
+    
+    <textarea id="input" placeholder="Enter PromQL query...">sum(rate(http_requests_total[5m])) by (status)</textarea>
+    
+    <div>
+        <label>Formatter: </label>
+        <select id="formatter">
+            <option value="main">Main (Default)</option>
+            <option value="vic">VictoriaMetrics</option>
+        </select>
+        <button onclick="formatQuery()">Format</button>
+        <button onclick="loadExample()">Load Example</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+    
+    <!-- Hidden elements for WASM compatibility -->
+    <div id="promqlInput" style="display: none;"></div>
+    <div id="resultDiv" style="display: none;"></div>
+    <div id="loadingWarning" style="display: none;"></div>
+    <div id="runButton" style="display: none;"></div>
+    <div id="exampleButton" style="display: none;"></div>
+    
+    <script src="wasm_exec.js"></script>
+    <script>
+        let wasmLoaded = false;
+        
+        // Initialize WASM
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("promqlparser.wasm"), go.importObject)
+            .then((result) => {
+                go.run(result.instance);
+                wasmLoaded = true;
+                console.log("WASM loaded successfully");
+            });
+        
+        function formatQuery() {
+            if (!wasmLoaded) {
+                document.getElementById('result').textContent = 'WASM module not loaded yet';
+                return;
+            }
+            
+            const input = document.getElementById('input').value;
+            const formatter = document.getElementById('formatter').value;
+            
+            if (!input.trim()) {
+                document.getElementById('result').textContent = 'Please enter a PromQL query';
+                return;
+            }
+            
+            try {
+                // Set up the hidden elements that the WASM code expects
+                document.getElementById('promqlInput').value = input;
+                document.getElementById('resultDiv').innerHTML = '';
+                
+                // Call the WASM function with formatter type
+                parsepromql(input, formatter);
+                
+                // Get the result
+                const resultHTML = document.getElementById('resultDiv').innerHTML;
+                
+                // Extract the formatted query from HTML
+                let formattedQuery = input; // fallback
+                
+                const codeMatch = resultHTML.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+                if (codeMatch) {
+                    formattedQuery = codeMatch[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                }
+                
+                document.getElementById('result').textContent = formattedQuery;
+                
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+                console.error('Formatting error:', error);
+            }
+        }
+        
+        function loadExample() {
+            if (wasmLoaded && typeof loadexample === 'function') {
+                loadexample();
+                const exampleValue = document.getElementById('promqlInput').value;
+                if (exampleValue) {
+                    document.getElementById('input').value = exampleValue;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
