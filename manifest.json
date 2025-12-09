@@ -3,7 +3,7 @@
   "name": "PromQL Formatter",
   "version": "1.0",
   "description": "Format PromQL queries",
-  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "permissions": ["storage"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -18,21 +18,5 @@
   "web_accessible_resources": [{
     "resources": ["wasm_exec.js", "promqlparser.wasm"],
     "matches": ["<all_urls>"]
-  }],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "host_permissions": [
-    "*://*.prometheus.io/*",
-    "*://*.grafana.com/*",
-    "*://*.grafana.net/*",
-    "*://localhost:*/*"
-  ]
-} 
+  }]
+}

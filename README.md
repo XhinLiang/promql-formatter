@@ -6,16 +6,9 @@ A Chrome extension that helps you format PromQL queries to make them more readab
 
 - Format PromQL queries directly in your browser
 - No server required, all processing happens locally
-- Automatically detects query input fields in Prometheus UI and Grafana
 - Manually format queries through the extension popup
 
 ## Usage
-
-### Automatic Detection and Formatting
-
-1. Visit a page with PromQL query input fields (like Prometheus UI or Grafana)
-2. The extension automatically detects query fields and adds a "Format PromQL" button next to them
-3. After entering a PromQL query, click the button to format it
 
 ### Manual Formatting with Extension Popup
 

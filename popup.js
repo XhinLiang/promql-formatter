@@ -98,9 +98,6 @@ function checkGlobalFunctions() {
       wasmLoaded = true;
       document.getElementById('status').textContent = 'WASM module loaded, ready to use';
       document.getElementById('format').disabled = false;
-      
-      // Check if there are pending requests from the background script
-      checkPendingQuery();
     } else {
       document.getElementById('status').textContent = 'Warning: parsepromql function not found';
       console.warn("parsepromql function not found, listing global functions:", Object.keys(window).filter(key => 
@@ -205,44 +202,6 @@ function formatPromQL(query, formatterType = 'main') {
     }
   } else {
     throw new Error('PromQL formatting function not found');
-  }
-}
-
-// Check if there are pending query requests
-function checkPendingQuery() {
-  if (wasmLoaded && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get(['pendingQuery', 'selectedFormatter'], (data) => {
-      if (data.pendingQuery) {
-        // There are pending requests, try to format
-        try {
-          const formatterType = data.selectedFormatter || 'main';
-          const formattedQuery = formatPromQL(data.pendingQuery, formatterType);
-          
-          // Send result back to background script
-          chrome.runtime.sendMessage({
-            action: 'formatPromQLResult',
-            success: true,
-            result: formattedQuery
-          });
-          
-          // If launched from right-click menu, close popup after completion
-          chrome.storage.local.get(['isContextMenu', 'popupWindowId'], (contextData) => {
-            if (contextData.isContextMenu && contextData.popupWindowId) {
-              setTimeout(() => {
-                window.close();
-              }, 500);
-            }
-          });
-        } catch (error) {
-          // Send error message if there's an error
-          chrome.runtime.sendMessage({
-            action: 'formatPromQLResult',
-            success: false,
-            error: error.message
-          });
-        }
-      }
-    });
   }
 }
 
