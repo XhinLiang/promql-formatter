@@ -119,11 +119,13 @@ func (v *FormatterVisitor) formatBinaryExprAST(expr *parser.BinaryExpr) {
 		// Logical operators get special formatting
 		v.formatExprAST(expr.LHS)
 		v.output.WriteString("\n\n")
+		v.writeIndent()
 		v.output.WriteString(op)
 
 		// Handle vector matching
 		if expr.VectorMatching != nil && len(expr.VectorMatching.MatchingLabels) > 0 {
 			v.output.WriteString("\n\n")
+			v.writeIndent()
 			if expr.VectorMatching.On {
 				v.output.WriteString("on(")
 			} else {
@@ -134,6 +136,7 @@ func (v *FormatterVisitor) formatBinaryExprAST(expr *parser.BinaryExpr) {
 		}
 
 		v.output.WriteString("\n\n")
+		v.writeIndent()
 		v.formatExprAST(expr.RHS)
 
 	case op == "/":
@@ -142,6 +145,7 @@ func (v *FormatterVisitor) formatBinaryExprAST(expr *parser.BinaryExpr) {
 		v.output.WriteByte('\n')
 		v.writeIndent()
 		v.output.WriteString("/\n")
+		v.writeIndent()
 		v.formatExprAST(expr.RHS)
 
 	case op == "-":
@@ -150,6 +154,7 @@ func (v *FormatterVisitor) formatBinaryExprAST(expr *parser.BinaryExpr) {
 		v.output.WriteByte('\n')
 		v.writeIndent()
 		v.output.WriteString("-\n")
+		v.writeIndent()
 		v.formatExprAST(expr.RHS)
 
 	case isComparisonOperator(op):

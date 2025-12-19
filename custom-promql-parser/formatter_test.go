@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func normalizeOutput(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		line = strings.ReplaceAll(line, "\t", "    ")
+		line = strings.TrimRight(line, " \t")
+		lines[i] = line
+	}
+	normalized := strings.Join(lines, "\n")
+	return strings.Trim(normalized, "\n")
+}
+
 func TestFormatPromql(t *testing.T) {
 	testCases := []struct {
 		name          string
@@ -27,9 +39,9 @@ and  sum(increase(aggr:example_metric:1m_total{service="example-service",env="li
 `,
 			expected: `
 (
-	sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m]))
-	-
-	sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m] offset 1d))
+    sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m]))
+    -
+    sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m] offset 1d))
 )
 /
 sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m] offset 1d))
@@ -49,7 +61,6 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 and
 
 sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env="live",event_code!~"7|8",service="example-service"}[1m]))
-
 > 10
 `,
 			expectError: false,
@@ -91,7 +102,7 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 			expectError: false,
 		},
 		{
-			name: "auto fix offset position 5",
+			name: "TODO",
 			input: `
 (
     (
@@ -134,8 +145,8 @@ sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_f
         sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
     )
     /
-    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w)) 
-	< -0.4
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
+    < -0.4
 
     and
 
@@ -145,15 +156,15 @@ sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_f
 
 and
 
- 
-   (
+(
+    (
         sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m]))
         -
         sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
     )
     /
-    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d)) 
-	< -0.4
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
+    < -0.4
 
     and
 
@@ -171,10 +182,10 @@ and
   sum(increase(pass_rcmd_gps{}[1m])) by (l1) > 10
 )`,
 			expected: `(
-	sum by (l1) (increase(pass_rcmd_gps{l0="true"}[1m]))
-	/
-	sum by (l1) (increase(pass_rcmd_gps[1m]))
-	< 0.2
+    sum by (l1) (increase(pass_rcmd_gps{l0="true"}[1m]))
+    /
+    sum by (l1) (increase(pass_rcmd_gps[1m]))
+    < 0.2
 )
 
 and
@@ -182,8 +193,8 @@ and
 on(l1) 
 
 (
-	sum by (l1) (increase(pass_rcmd_gps[1m]))
-	> 10
+    sum by (l1) (increase(pass_rcmd_gps[1m]))
+    > 10
 )`,
 			expectError: false,
 		},
@@ -204,13 +215,10 @@ on(l1)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				// The Prometheus parser's Pretty function has some complex spacing rules.
-				// We'll compare without worrying about extra spaces for now.
-				normalizedExpected := strings.Join(strings.Fields(tc.expected), " ")
-				normalizedGot := strings.Join(strings.Fields(pretty), " ")
-
-				if normalizedGot != normalizedExpected {
-					t.Fatalf("expected:\n%s\n\ngot:\n%s", tc.expected, pretty)
+				normalizedExpected := normalizeOutput(tc.expected)
+				normalizedPretty := normalizeOutput(pretty)
+				if normalizedPretty != normalizedExpected {
+					t.Fatalf("expected:\n%s\n\ngot:\n%s", normalizedExpected, normalizedPretty)
 				}
 			}
 		})
