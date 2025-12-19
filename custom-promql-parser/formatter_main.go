@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/VictoriaMetrics/metricsql"
 	"github.com/prometheus/prometheus/promql/parser"
 )
 
@@ -253,6 +254,11 @@ func formatPromqlMain(promql string) (string, error) {
 
 	// Restore original variables
 	formatted = varManager.RestoreVariables(formatted)
+
+	validationQuery := NewVariableManager().ReplaceVariables(formatted)
+	if _, err := metricsql.Parse(validationQuery); err != nil {
+		return "", fmt.Errorf("formatted query is invalid: %v; 请使用 VictoriaMetrics 进行 Format", err)
+	}
 
 	return formatted, nil
 }

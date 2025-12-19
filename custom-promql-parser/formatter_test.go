@@ -90,6 +90,79 @@ sum by (event_code, region, biz_code) (increase(aggr:example_metric:1m_total{env
 			expected:    `sum by (bundle) (increase(ads_filter_after_total{env="live",region="id"}[10m] offset 1w))`,
 			expectError: false,
 		},
+		{
+			name: "auto fix offset position 5",
+			input: `
+(
+    (
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m]))
+        -
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
+    )
+    /
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w)) < -0.4
+
+and
+
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
+    > 500
+)
+
+and
+
+(
+    (
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m]))
+        -
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
+    )
+    /
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d)) < -0.4
+
+and
+
+sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
+    > 500
+)
+
+`,
+			expected: `
+(
+    (
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m]))
+        -
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
+    )
+    /
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w)) 
+	< -0.4
+
+    and
+
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1w))
+    > 500
+)
+
+and
+
+ 
+   (
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m]))
+        -
+        sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
+    )
+    /
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d)) 
+	< -0.4
+
+    and
+
+    sum by (region) (rate(server_handled_total{method="get_pdp_top_info",x_traffic_flag!~"stress_test|shadow"}[1m] offset 1d))
+    > 500
+)
+`,
+			expectError: false,
+		},
 
 		{
 			name: "complex query with on",
