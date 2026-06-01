@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Formatting engine (promql-formatter-cli)
+    url: https://github.com/XhinLiang/promql-formatter-cli/issues
+    about: If the formatted output itself is wrong, report it against the engine.
