@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: Suggest an improvement to the extension
-title: "[feature] "
+title: '[feature] '
 labels: enhancement
 ---
 

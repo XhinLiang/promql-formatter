@@ -38,7 +38,7 @@ coverage/
 .parcel-cache/
 .turbo/
 *.tsbuildinfo
-package-lock.json
+# NOTE: package-lock.json is committed on purpose for reproducible installs.
 yarn.lock
 pnpm-lock.yaml
 bun.lockb
@@ -50,8 +50,8 @@ build/
 *.crx
 *.pem
 
-# --- WebAssembly build output ---
-promqlparser.wasm
+# --- WebAssembly build output (compiled by scripts/build-wasm.sh) ---
+src/promqlparser.wasm
 
 # --- Go ---
 /wasm/vendor/

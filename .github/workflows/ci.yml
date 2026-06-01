@@ -10,12 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  wasm-build:
-    name: build wasm · vet
+  lint:
+    name: lint · format
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: wasm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
+  test:
+    name: build wasm · vet · test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +37,18 @@ jobs:
         with:
           go-version: stable
 
-      - name: Vet
-        run: GOOS=js GOARCH=wasm go vet ./...
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Build promqlparser.wasm
-        run: GOOS=js GOARCH=wasm go build -o ../promqlparser.wasm .
+      - name: Vet (js/wasm)
+        run: GOOS=js GOARCH=wasm go vet ./...
+        working-directory: wasm
+
+      - run: npm ci
+
+      # `npm test` runs the pretest hook (build:wasm) then the node test runner.
+      - name: Build wasm + run tests
+        run: npm test

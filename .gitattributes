@@ -1,0 +1,13 @@
+# Normalize line endings on checkin; check out with native endings.
+* text=auto eol=lf
+
+# Shell scripts must stay LF even on Windows checkouts.
+*.sh text eol=lf
+
+# Binary assets — never diff or normalize.
+*.png binary
+*.wasm binary
+
+# Keep generated/vendored files out of language stats and collapse diffs.
+src/wasm_exec.js linguist-vendored
+*.wasm linguist-generated
