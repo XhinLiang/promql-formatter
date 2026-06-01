@@ -25,7 +25,7 @@ jobs:
           go-version: stable
 
       - name: Vet
-        run: go vet ./...
+        run: GOOS=js GOARCH=wasm go vet ./...
 
       - name: Build promqlparser.wasm
         run: GOOS=js GOARCH=wasm go build -o ../promqlparser.wasm .
