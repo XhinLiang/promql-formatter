@@ -6,7 +6,7 @@ Thanks for helping improve the **promql-formatter** Chrome extension!
 
 - **Formatting logic** (how a query is prettified) lives in
   [promql-formatter-cli](https://github.com/XhinLiang/promql-formatter-cli).
-  Bug in the *output*? Fix it there.
+  Bug in the _output_? Fix it there.
 - **This repo** is the extension shell: the popup UI (`popup.html`, `popup.js`),
   the WASM entry point (`wasm/main.go`), and the build script.
 

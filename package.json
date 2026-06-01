@@ -1,16 +1,38 @@
 {
   "name": "promql-formatter",
   "version": "1.0.0",
-  "description": "Chrome extension for formatting PromQL queries",
+  "description": "Chrome extension that prettifies PromQL queries locally via Go/WebAssembly.",
+  "private": true,
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/XhinLiang/promql-formatter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XhinLiang/promql-formatter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XhinLiang/promql-formatter/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "lint": "eslint *.js",
-    "lint:fix": "eslint *.js --fix",
-    "build": "bash build.sh"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "bash scripts/build-wasm.sh",
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "pretest": "npm run build:wasm",
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "package": "bash scripts/package-extension.sh",
+    "version": "node scripts/sync-version.mjs && git add src/manifest.json"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.3",
+    "globals": "^15.0.0",
+    "jsdom": "^24.0.0",
     "prettier": "^3.2.5"
   }
-} 
+}

@@ -1,0 +1,11 @@
+dist/
+node_modules/
+package-lock.json
+
+# Vendored Go runtime glue and build output
+src/wasm_exec.js
+*.wasm
+
+# Binary assets
+assets/
+src/icons/

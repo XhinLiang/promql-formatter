@@ -1,8 +1,7 @@
-// Global variable to indicate if the WASM module is loaded
-let wasmLoaded = false;
-
 // Add necessary SVG icons
-document.body.insertAdjacentHTML('beforeend', `
+document.body.insertAdjacentHTML(
+  'beforeend',
+  `
     <svg style="display:none">
         <symbol id="gdoc_check" viewBox="0 0 24 24">
             <path d="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41-1.41L9,16.17z"/>
@@ -14,7 +13,8 @@ document.body.insertAdjacentHTML('beforeend', `
             <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
         </symbol>
     </svg>
-`);
+`,
+);
 
 // Ensure global object exists
 window.promqlparser = {};
@@ -24,46 +24,48 @@ async function initWasm() {
   try {
     // Create necessary DOM elements
     createRequiredElements();
-    
+
     // Load Go environment
     const go = new Go();
-    
+
     // Try to load WASM using instantiateStreaming
     try {
       const result = await WebAssembly.instantiateStreaming(
         fetch('promqlparser.wasm'),
-        go.importObject
+        go.importObject,
       );
-      
-      console.log("Starting WASM module");
+
+      console.log('Starting WASM module');
       go.run(result.instance);
-      console.log("WASM module successfully loaded");
-      
+      console.log('WASM module successfully loaded');
+
       // Check global functions
       checkGlobalFunctions();
     } catch (streamingError) {
-      console.error("Failed to load using instantiateStreaming:", streamingError);
-      
+      console.error('Failed to load using instantiateStreaming:', streamingError);
+
       // Fallback to traditional method
       try {
         const response = await fetch('promqlparser.wasm');
         const bytes = await response.arrayBuffer();
         const result = await WebAssembly.instantiate(bytes, go.importObject);
-        
-        console.log("Starting WASM module using traditional method");
+
+        console.log('Starting WASM module using traditional method');
         go.run(result.instance);
-        console.log("WASM module successfully loaded");
-        
+        console.log('WASM module successfully loaded');
+
         // Check global functions
         checkGlobalFunctions();
       } catch (fallbackError) {
-        console.error("All loading methods failed:", fallbackError);
-        document.getElementById('status').textContent = 'Error: Failed to load WASM module - ' + fallbackError.message;
+        console.error('All loading methods failed:', fallbackError);
+        document.getElementById('status').textContent =
+          'Error: Failed to load WASM module - ' + fallbackError.message;
       }
     }
   } catch (error) {
     console.error('Error during initialization:', error);
-    document.getElementById('status').textContent = 'Error: Initialization failed - ' + error.message;
+    document.getElementById('status').textContent =
+      'Error: Initialization failed - ' + error.message;
   }
 }
 
@@ -75,9 +77,9 @@ function createRequiredElements() {
     { id: 'exampleButton', hidden: false },
     { id: 'loadingWarning', hidden: false },
     { id: 'resultDiv', hidden: false },
-    { id: 'promqlInput', hidden: false }
+    { id: 'promqlInput', hidden: false },
   ];
-  
+
   for (const elem of elements) {
     let el = document.getElementById(elem.id);
     if (!el) {
@@ -95,14 +97,16 @@ function createRequiredElements() {
 function checkGlobalFunctions() {
   setTimeout(() => {
     if (typeof parsepromql === 'function') {
-      wasmLoaded = true;
       document.getElementById('status').textContent = 'WASM module loaded, ready to use';
       document.getElementById('format').disabled = false;
     } else {
       document.getElementById('status').textContent = 'Warning: parsepromql function not found';
-      console.warn("parsepromql function not found, listing global functions:", Object.keys(window).filter(key => 
-        typeof window[key] === 'function' && !key.startsWith('_')
-      ));
+      console.warn(
+        'parsepromql function not found, listing global functions:',
+        Object.keys(window).filter(
+          (key) => typeof window[key] === 'function' && !key.startsWith('_'),
+        ),
+      );
     }
   }, 500);
 }
@@ -111,8 +115,8 @@ function checkGlobalFunctions() {
 function formatPromQL(query, formatterType = 'vic') {
   if (typeof parsepromql === 'function') {
     try {
-      console.log("Starting to format query:", query, "with formatter:", formatterType);
-      
+      console.log('Starting to format query:', query, 'with formatter:', formatterType);
+
       // Ensure resultDiv exists
       let resultDiv = document.getElementById('resultDiv');
       if (!resultDiv) {
@@ -120,10 +124,10 @@ function formatPromQL(query, formatterType = 'vic') {
         resultDiv.id = 'resultDiv';
         document.body.appendChild(resultDiv);
       }
-      
+
       // Clear any existing content
       resultDiv.innerHTML = '';
-      
+
       // Try to set input element
       let inputElem = document.getElementById('promqlInput');
       if (!inputElem) {
@@ -132,46 +136,52 @@ function formatPromQL(query, formatterType = 'vic') {
         inputElem.style.display = 'none';
         document.body.appendChild(inputElem);
       }
-      
+
       // Set input value
       inputElem.value = query;
-      
+
       // Call parsepromql function with formatter type
       console.log("Calling parsepromql using original website's method...");
       parsepromql(query, formatterType);
-      
+
       // Get result
       const result = resultDiv.innerHTML;
-      console.log("Formatting result HTML:", result);
-      
+      console.log('Formatting result HTML:', result);
+
       // Extract formatted PromQL (try different extraction methods)
       let formattedQuery = null;
-      
+
       // Method 1: Extract code block using regex
       const match = result.match(/<pre class="chroma"><code[^>]*>([\s\S]*?)<\/code><\/pre>/);
       if (match && match[1]) {
-        formattedQuery = match[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-        console.log("Method 1 extraction result:", formattedQuery);
+        formattedQuery = match[1]
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+        console.log('Method 1 extraction result:', formattedQuery);
       }
-      
+
       // Method 2: Extract from any pre-formatted text
       if (!formattedQuery) {
         const preMatch = result.match(/<pre[^>]*>([\s\S]*?)<\/pre>/);
         if (preMatch && preMatch[1]) {
-          formattedQuery = preMatch[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-          console.log("Method 2 extraction result:", formattedQuery);
+          formattedQuery = preMatch[1]
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&');
+          console.log('Method 2 extraction result:', formattedQuery);
         }
       }
-      
+
       // Method 3: Check if text contains actual code content
       if (!formattedQuery) {
         const codeContent = result.match(/```[\s\S]*?```/);
         if (codeContent) {
           formattedQuery = codeContent[0].replace(/```/g, '').trim();
-          console.log("Method 3 extraction result:", formattedQuery);
+          console.log('Method 3 extraction result:', formattedQuery);
         }
       }
-      
+
       // Method 4: Get content directly from innerText
       if (!formattedQuery) {
         try {
@@ -182,22 +192,22 @@ function formatPromQL(query, formatterType = 'vic') {
           const codeElem = temp.querySelector('code') || temp.querySelector('pre');
           if (codeElem) {
             formattedQuery = codeElem.innerText;
-            console.log("Method 4 extraction result:", formattedQuery);
+            console.log('Method 4 extraction result:', formattedQuery);
           }
         } catch (e) {
-          console.error("Method 4 extraction failed:", e);
+          console.error('Method 4 extraction failed:', e);
         }
       }
-      
+
       // If all methods fail, return original query
       if (!formattedQuery || formattedQuery.trim() === query.trim()) {
-        console.log("Failed to extract formatted PromQL, returning original query");
+        console.log('Failed to extract formatted PromQL, returning original query');
         return query;
       }
-      
+
       return formattedQuery;
     } catch (error) {
-      console.error("Error during formatting:", error);
+      console.error('Error during formatting:', error);
       throw error;
     }
   } else {
@@ -209,7 +219,7 @@ function formatPromQL(query, formatterType = 'vic') {
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize WASM
   initWasm();
-  
+
   // Load saved formatter preference
   if (chrome.storage && chrome.storage.local) {
     chrome.storage.local.get('selectedFormatter', (data) => {
@@ -219,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Format button event
   const formatButton = document.getElementById('format');
   formatButton.addEventListener('click', () => {
@@ -227,17 +237,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultDiv = document.getElementById('result');
     const formatterSelect = document.getElementById('formatter-select');
     const selectedFormatter = formatterSelect.value;
-    
+
     if (!input.trim()) {
       resultDiv.textContent = 'Please enter PromQL query';
       return;
     }
-    
+
     try {
       const formattedQuery = formatPromQL(input, selectedFormatter);
       resultDiv.textContent = formattedQuery;
       document.getElementById('copy').disabled = false;
-      
+
       // Save selected formatter to storage for future use
       if (chrome.storage && chrome.storage.local) {
         chrome.storage.local.set({ selectedFormatter: selectedFormatter });
@@ -246,12 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
       resultDiv.textContent = 'Error: ' + error.message;
     }
   });
-  
+
   // Copy result button event
   const copyButton = document.getElementById('copy');
   copyButton.addEventListener('click', () => {
     const resultText = document.getElementById('result').textContent;
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(resultText).then(() => {
       const originalText = copyButton.textContent;
@@ -261,4 +271,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 1500);
     });
   });
-}); 
+});

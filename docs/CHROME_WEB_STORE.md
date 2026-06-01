@@ -5,9 +5,9 @@ listing, then wires up tag-based auto-publishing for future versions.
 
 There are three phases:
 
-1. [One-time account setup](#1-one-time-account-setup) — *you, in a browser ($5).*
-2. [First submission (manual)](#2-first-submission-manual) — *you, in the dashboard.*
-3. [Auto-publish for future versions](#3-auto-publish-for-future-versions) — *one-time setup, then `git tag`.*
+1. [One-time account setup](#1-one-time-account-setup) — _you, in a browser ($5)._
+2. [First submission (manual)](#2-first-submission-manual) — _you, in the dashboard._
+3. [Auto-publish for future versions](#3-auto-publish-for-future-versions) — _one-time setup, then `git tag`._
 
 Everything that can be prepared from the repo already is: a clean store ZIP, the
 listing copy, and the screenshots.
@@ -54,12 +54,12 @@ Store** GitHub Actions run.)
 
 ### 2.3 Store listing copy (ready to paste)
 
-| Field | Value |
-|-------|-------|
-| **Name** | `PromQL Formatter` |
+| Field                    | Value                                                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **Name**                 | `PromQL Formatter`                                                                                                      |
 | **Summary** (≤132 chars) | `Prettify PromQL queries locally in your browser — VictoriaMetrics & Prometheus backends, no data leaves your machine.` |
-| **Category** | `Developer Tools` |
-| **Language** | `English` |
+| **Category**             | `Developer Tools`                                                                                                       |
+| **Language**             | `English`                                                                                                               |
 
 **Description** (paste as-is):
 
@@ -90,20 +90,20 @@ Source code: https://github.com/XhinLiang/promql-formatter
 - `assets/store/screenshot-1.png`
 - `assets/store/screenshot-2.png`
 
-**Store icon:** `images/icon128.png` (128×128).
+**Store icon:** `src/icons/icon128.png` (128×128).
 
 **Optional — Social/promo:** `assets/social-preview.png` works as a small promo
 tile source if you want one.
 
 ### 2.4 Privacy practices
 
-| Prompt | Answer |
-|--------|--------|
-| **Single purpose** | `Format (prettify) PromQL queries locally in the browser.` |
-| **Permission: `storage`** | `Stores the user's selected formatter backend so it is remembered between sessions.` |
-| **Host permissions** | None requested. |
-| **Are you using remote code?** | **No** — all code (including the WebAssembly module) ships inside the package. |
-| **Data collection** | Declare **no** data collected/used/sold. The extension does not transmit anything. |
+| Prompt                         | Answer                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| **Single purpose**             | `Format (prettify) PromQL queries locally in the browser.`                           |
+| **Permission: `storage`**      | `Stores the user's selected formatter backend so it is remembered between sessions.` |
+| **Host permissions**           | None requested.                                                                      |
+| **Are you using remote code?** | **No** — all code (including the WebAssembly module) ships inside the package.       |
+| **Data collection**            | Declare **no** data collected/used/sold. The extension does not transmit anything.   |
 
 A privacy policy URL is generally **not required** when you declare no data
 collection. If the form asks for one, you can point to the README's Privacy
@@ -120,7 +120,7 @@ workflow can upload and publish new versions whenever you push a `v*` tag.
 
 1. In the **[Google Cloud Console](https://console.cloud.google.com/)**, create (or pick) a project.
 2. **APIs & Services → Library →** enable the **Chrome Web Store API**.
-3. **APIs & Services → OAuth consent screen:** configure it (User type *External* is
+3. **APIs & Services → OAuth consent screen:** configure it (User type _External_ is
    fine), and add your own Google account as a **Test user**.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID →**
    application type **Desktop app**. Note the **Client ID** and **Client secret**.
@@ -138,11 +138,11 @@ workflow can upload and publish new versions whenever you push a `v*` tag.
 
 **Settings → Secrets and variables → Actions → New repository secret**, add:
 
-| Secret | Value |
-|--------|-------|
-| `CWS_EXTENSION_ID` | the Extension ID from step 2.2 |
-| `CWS_CLIENT_ID` | OAuth client id |
-| `CWS_CLIENT_SECRET` | OAuth client secret |
+| Secret              | Value                           |
+| ------------------- | ------------------------------- |
+| `CWS_EXTENSION_ID`  | the Extension ID from step 2.2  |
+| `CWS_CLIENT_ID`     | OAuth client id                 |
+| `CWS_CLIENT_SECRET` | OAuth client secret             |
 | `CWS_REFRESH_TOKEN` | the refresh token from step 3.1 |
 
 Until these exist, the workflow still runs on a tag — it builds the ZIP and uploads
@@ -151,9 +151,9 @@ it as an artifact, then **skips** the publish step (it won't fail).
 ### 3.3 Ship a new version
 
 ```sh
-# bump the version in manifest.json (e.g. 1.0.0 -> 1.0.1), commit, then:
-git tag v1.0.1
-git push origin v1.0.1
+# bump the version (updates package.json + auto-syncs src/manifest.json), then:
+npm version patch          # 1.0.0 -> 1.0.1, commits the bump
+git push && git push --tags
 ```
 
 The workflow builds `dist/promql-formatter-v1.0.1.zip` and publishes it to the
@@ -164,13 +164,13 @@ the review passes.)
 
 ## What ships in the package
 
-`scripts/package-extension.sh` includes **only** the runtime files, with everything
-at the archive root:
+`scripts/package-extension.sh` ships **only** the runtime payload (the contents of
+`src/` plus `LICENSE`), with everything at the archive root:
 
 ```
 manifest.json  popup.html  popup.js  wasm_exec.js  promqlparser.wasm
-images/icon16.png  images/icon48.png  images/icon128.png  LICENSE
+icons/icon16.png  icons/icon48.png  icons/icon128.png  LICENSE
 ```
 
-Dev/test files (`main.js`, `chrome-extension.js`, `test*.html`, `promqlparser.html`,
-`node_modules/`, `build.sh`, `wasm/`, docs, …) are intentionally excluded.
+Everything outside `src/` (the Go sources in `wasm/`, `scripts/`, `test/`,
+`node_modules/`, `assets/`, `docs/`, config files, …) is intentionally excluded.

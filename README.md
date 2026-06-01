@@ -52,14 +52,14 @@ sum(rate(http_requests_total[1m]))by(job) / sum(rate(http_requests_total[1m] off
 git clone https://github.com/XhinLiang/promql-formatter.git
 cd promql-formatter
 npm install
-npm run build        # builds promqlparser.wasm from wasm/
+npm run build        # compiles src/promqlparser.wasm from wasm/
 ```
 
 Then:
 
 1. Open `chrome://extensions/`.
 2. Enable **Developer mode** (top-right).
-3. Click **Load unpacked** and select the project folder.
+3. Click **Load unpacked** and select the **`src/`** folder.
 4. Click the extension icon, paste a query, hit **Format**.
 
 ## 🔧 How it works
@@ -71,25 +71,50 @@ shared with the standalone CLI. This extension is a thin shell:
 ```
 wasm/main.go (//go:build js,wasm)  ──imports──▶  github.com/xhinliang/promql-formatter-cli
         │
-        └── compiled to promqlparser.wasm, called from the popup's JavaScript
+        └── compiled to src/promqlparser.wasm, called from the popup's JavaScript
 ```
 
-`build.sh` compiles `wasm/` with `GOOS=js GOARCH=wasm` into `promqlparser.wasm`.
+`scripts/build-wasm.sh` compiles `wasm/` with `GOOS=js GOARCH=wasm` into
+`src/promqlparser.wasm`, and refreshes `src/wasm_exec.js` to match the active Go
+toolchain.
+
+## 🗂️ Project layout
+
+```
+src/            the unpacked extension — load THIS folder in chrome://extensions
+  manifest.json
+  popup.html / popup.js
+  wasm_exec.js          Go runtime glue (vendored, refreshed by the build)
+  promqlparser.wasm     build output (gitignored)
+  icons/
+wasm/           Go source for the WASM module (main.go, go.mod, go.sum)
+scripts/        build-wasm.sh · package-extension.sh · sync-version.mjs
+test/           node:test + jsdom smoke tests
+assets/         repo/store artwork (not shipped)
+docs/           Chrome Web Store guide
+```
 
 ### Backends
 
-| Backend | Engine |
-|---------|--------|
-| **`vic`** _(default)_ | [VictoriaMetrics `metricsql.Prettify`](https://github.com/VictoriaMetrics/metricsql) |
-| **`main`** | [Prometheus](https://github.com/prometheus/prometheus) parser + custom AST formatter with Grafana `$variable` support |
+| Backend               | Engine                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **`vic`** _(default)_ | [VictoriaMetrics `metricsql.Prettify`](https://github.com/VictoriaMetrics/metricsql)                                  |
+| **`main`**            | [Prometheus](https://github.com/prometheus/prometheus) parser + custom AST formatter with Grafana `$variable` support |
 
 ### Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run build` | Build the WebAssembly component |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix ESLint issues |
+| Command                | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `npm run build`        | Compile `src/promqlparser.wasm` from `wasm/`         |
+| `npm test`             | Build the WASM, then run the `node:test` smoke suite |
+| `npm run lint`         | Run ESLint (flat config)                             |
+| `npm run lint:fix`     | Auto-fix ESLint issues                               |
+| `npm run format`       | Format the repo with Prettier                        |
+| `npm run format:check` | Check formatting without writing                     |
+| `npm run package`      | Build a store-ready ZIP into `dist/`                 |
+
+Version bumps go through `npm version <patch\|minor\|major>`, which updates
+`package.json` and auto-syncs `src/manifest.json`.
 
 ## 🔒 Privacy
 

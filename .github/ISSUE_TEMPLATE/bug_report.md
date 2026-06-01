@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Report a problem with the extension or its formatting
-title: "[bug] "
+title: '[bug] '
 labels: bug
 ---
 
@@ -38,6 +38,6 @@ labels: bug
 - OS:
 - Built from commit:
 
-> Tip: if the *output* is wrong, the formatting engine lives in
+> Tip: if the _output_ is wrong, the formatting engine lives in
 > [promql-formatter-cli](https://github.com/XhinLiang/promql-formatter-cli) — feel
 > free to file it there.
