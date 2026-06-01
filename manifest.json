@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
   "name": "PromQL Formatter",
-  "version": "1.0",
-  "description": "Format PromQL queries",
+  "version": "1.0.0",
+  "description": "Prettify PromQL queries locally in your browser — VictoriaMetrics & Prometheus backends, no data leaves your machine.",
   "permissions": ["storage"],
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -14,9 +19,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  },
-  "web_accessible_resources": [{
-    "resources": ["wasm_exec.js", "promqlparser.wasm"],
-    "matches": ["<all_urls>"]
-  }]
+  }
 }

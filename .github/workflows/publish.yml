@@ -1,0 +1,71 @@
+name: Publish to Chrome Web Store
+
+# Builds a clean store ZIP and (when secrets are configured) uploads & publishes
+# it to the Chrome Web Store. Trigger by pushing a version tag, e.g.:
+#   git tag v1.0.1 && git push origin v1.0.1
+# or run manually from the Actions tab.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CWS_EXTENSION_ID     the item ID from the Web Store dashboard URL
+#   CWS_CLIENT_ID        Google OAuth client id
+#   CWS_CLIENT_SECRET    Google OAuth client secret
+#   CWS_REFRESH_TOKEN    OAuth refresh token (see docs/CHROME_WEB_STORE.md)
+#
+# Until those secrets exist, the workflow still builds and uploads the ZIP as a
+# run artifact, but skips the publish step (so it never fails for lack of setup).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build store ZIP
+        id: pkg
+        run: |
+          bash scripts/package-extension.sh
+          zip="$(ls dist/*.zip | head -1)"
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "Built: $zip"
+
+      - name: Upload ZIP as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension
+          path: ${{ steps.pkg.outputs.zip }}
+
+      - name: Check Chrome Web Store secrets
+        id: guard
+        run: |
+          if [ -z "${CWS_EXTENSION_ID}" ]; then
+            echo "::notice::Chrome Web Store secrets not configured — skipping publish."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload & publish to Chrome Web Store
+        if: steps.guard.outputs.configured == 'true'
+        uses: mnao305/chrome-extension-upload@v5
+        with:
+          file-path: ${{ steps.pkg.outputs.zip }}
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          publish: true

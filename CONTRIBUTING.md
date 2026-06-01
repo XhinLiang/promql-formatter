@@ -41,3 +41,9 @@ go mod tidy
 
 Open an issue with the input query, the selected backend (`vic` / `main`), the
 actual output, and what you expected.
+
+## Maintainers: releasing
+
+Build a store-ready ZIP with `bash scripts/package-extension.sh`. Publishing to the
+Chrome Web Store (and tag-based auto-publish) is documented in
+[docs/CHROME_WEB_STORE.md](docs/CHROME_WEB_STORE.md).
