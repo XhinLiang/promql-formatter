@@ -1,14 +1,11 @@
 #!/bin/bash
 set -e
 
-# Enter the custom-promql-parser directory
-cd "$(dirname "$0")/custom-promql-parser"
+# Build the WebAssembly component from the wasm/ module, which depends on
+# github.com/xhinliang/promql-formatter-cli for the formatting logic.
+cd "$(dirname "$0")/wasm"
 
-echo "Initializing Go module..."
-go mod tidy
-
-echo "Setting up WASM compilation environment..."
+echo "Building WASM (GOOS=js GOARCH=wasm)..."
 GOOS=js GOARCH=wasm go build -o ../promqlparser.wasm .
 
-echo "Compilation complete: promqlparser.wasm"
-echo "File has been output to the project root directory" 
+echo "Compilation complete: promqlparser.wasm (written to project root)"

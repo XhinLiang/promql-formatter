@@ -54,7 +54,7 @@ build/
 promqlparser.wasm
 
 # --- Go ---
-/custom-promql-parser/vendor/
+/wasm/vendor/
 *.exe
 *.exe~
 *.dll

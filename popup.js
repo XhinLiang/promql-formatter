@@ -108,7 +108,7 @@ function checkGlobalFunctions() {
 }
 
 // Format PromQL query
-function formatPromQL(query, formatterType = 'main') {
+function formatPromQL(query, formatterType = 'vic') {
   if (typeof parsepromql === 'function') {
     try {
       console.log("Starting to format query:", query, "with formatter:", formatterType);
