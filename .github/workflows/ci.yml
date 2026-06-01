@@ -36,6 +36,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: stable
+          cache-dependency-path: wasm/go.sum
 
       - name: Set up Node
         uses: actions/setup-node@v4
